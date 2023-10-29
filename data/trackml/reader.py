@@ -153,7 +153,6 @@ class TrackMLReader(object):
             data.tofile(self.outputdir / "{}.bin".format(k))
             print("saved {} events for {}".format(data.shape[0], k))
 
-        # save meta data
         # save the meta information
         stoi = self.umid_dict
         itos = self.umid_dict_inv
