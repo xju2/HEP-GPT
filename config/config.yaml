@@ -15,7 +15,10 @@ wandb_log: False # disabled by default
 wandb_project: 'owt'
 wandb_run_name: 'gpt2' # 'run' + str(time.time())
 
-
+fabric:
+  accelerator: auto  # cpu, gpu, tpu, auto
+  devices: 1
+  strategy: ddp  # dp, ddp, ddp_spawn, xla, deepspeed, fsdp
 
 # training
 training:
