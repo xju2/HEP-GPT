@@ -152,10 +152,10 @@ class TrackMLReader(object):
         """
 
         for k, v in config.items():
-            print("processing {} events for {}".format(v[1] - v[0], k))
+            print("processing {:,} events for {}".format(v[1] - v[0], k))
             data = self.prepare_data(v[0], v[1])
             data.tofile(self.outputdir / "{}.bin".format(k))
-            print("saved {} tokens for {}".format(data.shape[0], k))
+            print("saved {:,} tokens for {}".format(data.shape[0], k))
 
         # save the meta information
         stoi = self.umid_dict
@@ -180,7 +180,7 @@ if __name__ == '__main__':
     reader = TrackMLReader(args.inputdir, args.outputdir)
     reader.run(
         {
-            "train": (0, 1),
-            "val": (1, 2),
+            "train": (0, 10),
+            "val": (10, 12),
         }
     )
