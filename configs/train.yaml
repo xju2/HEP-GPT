@@ -1,7 +1,14 @@
 # @package _global_
 
-# data
-out_dir: 'out-trackml'  # where to save the model checkpoints
+# specify default configurations
+defaults:
+  - _self_
+  - paths: default.yaml
+  - data: default.yaml
+  - fabric: default.yaml
+
+
+seed: 12345  # random seed for reproducibility
 log_interval: 200  # in terms of iterations
 max_epochs: 100
 
@@ -10,25 +17,15 @@ wandb_log: False # disabled by default
 wandb_project: 'owt'
 wandb_run_name: 'gpt2' # 'run' + str(time.time())
 
-train_data: data/trackml/train.bin
-val_data: data/trackml/val.bin
+
 
 # system
 compile: False  # not working yet!
 always_save_checkpoint: True # if True, always save a checkpoint after each eval
 
 init_from: 'scratch' # 'scratch' or 'resume' or 'gpt2*'
-ckpt_path: ${config.outdir} / 'best.ckpt' # path to the checkpoint to resume from
+ckpt_path: ${self.outdir} / 'best.ckpt' # path to the checkpoint to resume from
 
-num_workers: 1  # number of workers for the data loader
-
-
-
-fabric:
-  accelerator: auto  # cpu, gpu, tpu, auto
-  devices: 1
-  strategy: ddp  # dp, ddp, ddp_spawn, xla, deepspeed, fsdp
-  precision: "bf16-mixed"  # bf16-true, transformer-engine, 16-true, 64-true
 
 
 # training

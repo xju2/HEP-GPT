@@ -59,9 +59,14 @@ class TrackDataSet(Dataset):
 
 def main(cfg: DictConfig) -> None:
     fabric_args = cfg.fabric if cfg.fabric else {}
+
+    num_workers = cfg.data.num_workers
+
     fabric = Fabric(**fabric_args)
-    fabric.seed_everything(1234)
     fabric.launch()
+
+    if cfg.get("seed"):
+        fabric.seed_everything(1234)
 
     dtype = "bfloat16" if torch.cuda.is_available() and torch.cuda.is_bf16_supported() else 'float32'
 
@@ -77,22 +82,22 @@ def main(cfg: DictConfig) -> None:
         model = torch.compile(model)  # require Pytorch 2.0
 
     optimizer = model.configure_optimizers(cfg.optimizer, device_type)
-    train_dataset = TrackDataSet(cfg.train_data, cfg.training.batch_size,
+    train_dataset = TrackDataSet(cfg.data.train_data, cfg.training.batch_size,
                                  cfg.training.block_size, do_randomize=True,
                                  name="train"
                                 )
     train_dataloader = DataLoader(train_dataset,
                                   batch_size=cfg.training.batch_size,
                                   shuffle=True,
-                                  num_workers=cfg.num_workers)
+                                  num_workers=num_workers)
 
-    val_dataset = TrackDataSet(cfg.val_data, cfg.training.batch_size,
+    val_dataset = TrackDataSet(cfg.data.val_data, cfg.training.batch_size,
                                cfg.training.block_size, do_randomize=True,
                                name="val")
     val_dataloader = DataLoader(val_dataset,
                                 batch_size=cfg.training.batch_size,
                                 shuffle=False,
-                                num_workers=cfg.num_workers)
+                                num_workers=num_workers)
 
     model, optimizer = fabric.setup(model, optimizer)
     dataloader = fabric.setup_dataloaders(train_dataloader)
@@ -105,8 +110,8 @@ def main(cfg: DictConfig) -> None:
     if cfg.init_from == "resume":
         fabric.load(cfg.ckpt_path, state)
 
-    outdir = Path(cfg.outdir) / cfg.wandb_project
-    outdir.mkdir(parents=True, exist_ok=True)
+    outdir = Path(cfg.paths.output_dir)
+    fabric.print(f"output directionary: {outdir}")
 
     iter_num = 0
     best_val_loss = 9999999

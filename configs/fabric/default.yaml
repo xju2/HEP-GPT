@@ -1,0 +1,4 @@
+accelerator: auto  # cpu, gpu, tpu, auto
+devices: 1
+strategy: ddp  # dp, ddp, ddp_spawn, xla, deepspeed, fsdp
+precision: "bf16-mixed"  # bf16-true, transformer-engine, 16-true, 64-true
