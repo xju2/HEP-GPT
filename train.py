@@ -7,7 +7,6 @@ from lightning.fabric import Fabric
 from model import GPTConfig, GPT
 
 import torch
-torch.set_float32_matmul_precision("medium")
 from torch.utils.data import Dataset
 from torch.utils.data import DataLoader
 
@@ -50,13 +49,22 @@ class TrackDataSet(Dataset):
 def main(cfg: DictConfig) -> None:
     fabric_args = cfg.fabric if cfg.fabric else {}
     fabric = Fabric(**fabric_args)
+    fabric.seed_everything(1234)
     fabric.launch()
 
+    dtype = "bfloat16" if torch.cuda.is_available() and torch.cuda.is_bf16_supported() else 'float32'
+
     device_type = fabric.device
-    print("device: ", device_type)
+    fabric.print("device: ", device_type)
 
     gpt_config = GPTConfig(**cfg.model)
     model = GPT(gpt_config)
+
+    if cfg.compile:
+        fabric.print("compiling the model... (takes a ~minute)")
+        unoptimized_model = model
+        model = torch.compile(model)  # require Pytorch 2.0
+
     optimizer = model.configure_optimizers(cfg.optimizer, device_type)
     train_dataset = TrackDataSet(cfg.train_data, cfg.training.batch_size,
                                  cfg.training.block_size, do_randomize=True,
@@ -78,19 +86,35 @@ def main(cfg: DictConfig) -> None:
     model, optimizer = fabric.setup(model, optimizer)
     dataloader = fabric.setup_dataloaders(train_dataloader)
 
-    iter_num = 0
+    state = {
+        "model": model,
+        "optimizer": optimizer,
+    }
 
+    if cfg.init_from == "resume":
+        fabric.load(cfg.ckpt_path, state)
+
+    outdir = Path(cfg.outdir) / cfg.wandb_project
+    outdir.mkdir(parents=True, exist_ok=True)
+
+    iter_num = 0
+    best_val_loss = 9999999
+    best_val_step = 0
     for epoch in range(cfg.max_epochs):
         for batch in dataloader:
             x, y = batch
             logits, loss = model(x, y)
             fabric.backward(loss)
+
+            # gradient clipping
+            fabric.clip_gradients(model, optimizer, max_norm=cfg.optimizer.grad_clip_val)
+
             optimizer.step()
             optimizer.zero_grad(set_to_none=True)
             iter_num += 1
             if iter_num % cfg.log_interval == 0:
                 lossf = loss.item()
-                print(f"epoch {epoch}, iter {iter_num}, loss {lossf:.4f}")
+                fabric.print(f"epoch {epoch}, iter {iter_num}, loss {lossf:.4f}")
 
             if iter_num % cfg.validation.val_interval == 0:
                 # evaluate the model on validation data and log the performance
@@ -113,8 +137,14 @@ def main(cfg: DictConfig) -> None:
                         losses[i] = loss.item()
 
                     out[loader_name] = losses.mean().item()
-                print(f"epoch {epoch}, iter {iter_num},", "train-loss {0[train]:.4f}, val-loss {0[val]:.4f}".format(out))
+                fabric.print(f"epoch {epoch}, iter {iter_num},", "train-loss {0[train]:.4f}, val-loss {0[val]:.4f}".format(out))
                 model.train()
+
+                if out["val"] < best_val_loss:
+                    best_val_loss = out["val"]
+                    best_val_step = iter_num
+                    fabric.save(cfg.ckpt_path, state)
+                    fabric.save(outdir / f"ckpt-{iter_num}.ckpt", state)
 
 
 @hydra.main(version_base=None, config_path="config", config_name="config")
