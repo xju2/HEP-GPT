@@ -12,6 +12,7 @@ https://github.com/karpathy/nanoGPT
 import math
 import inspect
 from dataclasses import dataclass
+from omegaconf import DictConfig
 
 import torch
 import torch.nn as nn
@@ -317,7 +318,8 @@ class GPT(nn.Module):
 
         return model
 
-    def configure_optimizers(self, weight_decay, learning_rate, betas, device_type):
+    def configure_optimizers(self, cfg: DictConfig, device_type):
+        weight_decay, learning_rate, betas = cfg.weight_decay, cfg.learning_rate, (cfg.beta1, cfg.beta2)
         # start with all of the candidate parameters
         param_dict = {pn: p for pn, p in self.named_parameters()}
         # filter out those that do not require grad
