@@ -160,3 +160,6 @@ cython_debug/
 #.idea/
 
 outputs
+*train.bin
+*val.bin
+*meta*pkl
