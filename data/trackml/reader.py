@@ -43,15 +43,19 @@ class TrackMLReader(object):
         if not self.outputdir.exists():
             self.outputdir.mkdir(parents=True)
 
-        self.suffix = ".csv.gz" if is_codalab_data else "csv"
+        # check one file in the inputdir directory to see the file suffix
+        for x in self.inputdir.iterdir():
+            if x.is_file():
+                filename = x
+                break
+
+        self.suffix = filename.suffix
         # count how many events in the directory
         all_evts = glob.glob(os.path.join(
             self.inputdir, "event*-hits.csv*"))
 
         self.nevts = len(all_evts)
-        pattern = "event([0-9]*)-hits.csv"
-        if is_codalab_data:
-            pattern = "event([0-9]*)-hits" + self.suffix
+        pattern = "event([0-9]*)-hits" + self.suffix
 
         self.all_evtids = sorted([
             int(re.search(pattern, os.path.basename(x)).group(1).strip())
@@ -92,7 +96,7 @@ class TrackMLReader(object):
         assert end_evt > start_evt and self.nevts >= end_evt, "not enough events."
         all_tracks = []
         for idx in range(start_evt, end_evt):
-            hits = self.read(reader.all_evtids[idx])
+            hits = self.read_event(reader.all_evtids[idx])
             hits = hits[hits.nhits >= min_truth_hits]
 
             vlid_groups = hits.groupby("particle_id")
@@ -151,7 +155,7 @@ class TrackMLReader(object):
             print("processing {} events for {}".format(v[1] - v[0], k))
             data = self.prepare_data(v[0], v[1])
             data.tofile(self.outputdir / "{}.bin".format(k))
-            print("saved {} events for {}".format(data.shape[0], k))
+            print("saved {} tokens for {}".format(data.shape[0], k))
 
         # save the meta information
         stoi = self.umid_dict
@@ -164,3 +168,19 @@ class TrackMLReader(object):
         }
         with open(self.outputdir / 'meta.pkl', 'wb') as f:
             pickle.dump(meta, f)
+
+if __name__ == '__main__':
+    import argparse
+    parser = argparse.ArgumentParser(description='TrackML Reader')
+    add_arg = parser.add_argument
+    add_arg('inputdir', help='Input directory')
+    add_arg('outputdir', help='Output directory')
+    args = parser.parse_args()
+
+    reader = TrackMLReader(args.inputdir, args.outputdir)
+    reader.run(
+        {
+            "train": (0, 1),
+            "val": (1, 2),
+        }
+    )
