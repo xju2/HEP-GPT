@@ -1,3 +1,14 @@
+import pyrootutils
+
+root = pyrootutils.setup_root(
+    search_from=__file__,
+    indicator=[".git", "pyproject.toml"],
+    pythonpath=True,
+    dotenv=True,
+)
+
+from pathlib import Path
+
 import hydra
 from omegaconf import DictConfig, OmegaConf
 
@@ -147,7 +158,7 @@ def main(cfg: DictConfig) -> None:
                     fabric.save(outdir / f"ckpt-{iter_num}.ckpt", state)
 
 
-@hydra.main(version_base=None, config_path="config", config_name="config")
+@hydra.main(version_base=None, config_path="configs", config_name="train.yaml")
 def training(cfg : DictConfig) -> None:
     print(OmegaConf.to_yaml(cfg))
     main(cfg)

@@ -7,3 +7,4 @@ datasets
 tiktoken
 wandb
 tqdm
+pyrootutils  # standardizing the project root setup

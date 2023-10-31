@@ -1,0 +1,19 @@
+[project]
+
+name = "HEP-GPT"
+
+version = "0.1.0"
+
+description = "HEP-GPT: A GPT model trained on HEP detectors"
+
+readme = "README.md"
+
+requires-python = ">=3.9"
+
+license = {file = "LICENSE"}
+
+keywords = ["HEP", "GPT", "detector", "representation"]
+
+authors = [
+  {name = "X. Ju", email = "xju@lbl.gov" }
+]
