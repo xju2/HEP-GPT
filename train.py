@@ -110,7 +110,7 @@ def main(cfg: DictConfig) -> None:
         "optimizer": optimizer,
     }
 
-    if cfg.init_from == "resume":
+    if cfg.init_from == "resume" and Path(cfg.ckpt_path).exists():
         fabric.load(cfg.ckpt_path, state)
 
     outdir = Path(cfg.paths.output_dir)
@@ -162,7 +162,7 @@ def main(cfg: DictConfig) -> None:
                 if out["val"] < best_val_loss:
                     best_val_loss = out["val"]
                     best_val_step = iter_num
-                    fabric.save(cfg.ckpt_path, state)
+                    fabric.save(outdir / "best.ckpt", state)
                     fabric.save(outdir / f"ckpt-{iter_num}.ckpt", state)
 
 

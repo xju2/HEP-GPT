@@ -25,7 +25,7 @@ compile: False  # not working yet!
 always_save_checkpoint: True # if True, always save a checkpoint after each eval
 
 init_from: 'scratch' # 'scratch' or 'resume' or 'gpt2*'
-ckpt_path: ${self.outdir} / 'best.ckpt' # path to the checkpoint to resume from
+ckpt_path: ${paths.output_dir}/best.ckpt # path to the checkpoint to resume from
 
 
 # training
