@@ -58,6 +58,8 @@ class TrackDataSet(Dataset):
 
 
 def main(cfg: DictConfig) -> None:
+    # torch precision settings
+    torch.set_float32_matmul_precision("medium")
 
 
     fabric: Fabric = hydra.utils.instantiate(cfg.fabric)
@@ -80,11 +82,12 @@ def main(cfg: DictConfig) -> None:
         model = torch.compile(model)  # require Pytorch 2.0
 
     optimizer = model.configure_optimizers(cfg.optimizer, device_type)
+
     num_workers = cfg.data.num_workers
+
     train_dataset = TrackDataSet(cfg.data.train_data, cfg.training.batch_size,
                                  cfg.training.block_size, do_randomize=True,
                                  name="train")
-
     train_dataloader = DataLoader(train_dataset,
                                   batch_size=cfg.training.batch_size,
                                   shuffle=True,
@@ -99,7 +102,8 @@ def main(cfg: DictConfig) -> None:
                                 num_workers=num_workers)
 
     model, optimizer = fabric.setup(model, optimizer)
-    dataloader = fabric.setup_dataloaders(train_dataloader)
+    train_dataloader = fabric.setup_dataloaders(train_dataloader)
+    val_dataloader = fabric.setup_dataloaders(val_dataloader)
 
     state = {
         "model": model,
@@ -116,7 +120,7 @@ def main(cfg: DictConfig) -> None:
     best_val_loss = 9999999
     best_val_step = 0
     for epoch in range(cfg.max_epochs):
-        for batch in dataloader:
+        for batch in train_dataloader:
             x, y = batch
             logits, loss = model(x, y)
             fabric.backward(loss)
