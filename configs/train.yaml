@@ -14,7 +14,7 @@ seed: 12345  # random seed for reproducibility
 log_interval: 200  # in terms of iterations
 
 # stopping criteria
-max_epochs: 1   # maximum number of epochs to run for
+max_epochs: 10   # maximum number of epochs to run for
 # max_iterations: 10_000  # maximum number of iterations to run for
 
 # system

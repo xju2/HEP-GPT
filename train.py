@@ -9,6 +9,7 @@ root = pyrootutils.setup_root(
 
 from pathlib import Path
 from typing import List
+import time
 import numpy as np
 
 import hydra
@@ -68,7 +69,7 @@ def main(cfg: DictConfig) -> None:
     torch.set_float32_matmul_precision("medium")
     loggers: List[Logger] = instantiate_loggers(cfg.loggers)
 
-    fabric: Fabric = hydra.utils.instantiate(cfg.fabric, loggers=loggers)
+    fabric: Fabric = hydra.utils.instantiate(cfg.fabric, loggers=loggers[0])
     fabric.launch()
 
     if cfg.get("seed"):
@@ -125,6 +126,9 @@ def main(cfg: DictConfig) -> None:
     iter_num = 0
     best_val_loss = 9999999
     best_val_step = 0
+    log.info("epoch global_step train validation time[ms]")
+    t0 = time.time()
+    training_timer = time.time()
     for epoch in range(cfg.max_epochs):
         for batch in train_dataloader:
             x, y = batch
@@ -137,13 +141,16 @@ def main(cfg: DictConfig) -> None:
             optimizer.step()
             optimizer.zero_grad(set_to_none=True)
             iter_num += 1
-            if iter_num % cfg.log_interval == 0:
-                lossf = loss.item()
-                fabric.print(f"epoch {epoch}, iter {iter_num}, loss {lossf:.4f}")
 
+            # timing info
+            t1 = time.time()
+            dt_tr = t1 - training_timer
+            training_timer = t1
+
+            # validation, if not, log the training loss
             if iter_num % cfg.validation.val_interval == 0:
                 # evaluate the model on validation data and log the performance
-                out = {}
+                out = {"dt": dt_tr}
                 loader_dict = {
                     "train": train_dataloader,
                     "val": val_dataloader
@@ -164,7 +171,7 @@ def main(cfg: DictConfig) -> None:
                     out[loader_name] = losses.mean().item()
                 model.train()
 
-                fabric.log_dict(out)
+                fabric.log_dict(out, step=iter_num)
 
                 if out["val"] < best_val_loss:
                     best_val_loss = out["val"]
@@ -173,6 +180,16 @@ def main(cfg: DictConfig) -> None:
                     fabric.save(outdir / f"ckpt-{iter_num}.ckpt", state)
                     fabric.print(f">>> epoch {epoch}, iter {iter_num},",
                                  "train {0[train]:.4f}, val {0[val]:.4f}".format(out))
+                    t1 = time.time()
+                    dt = t1 - t0
+                    t0 = t1
+                    log.info(f"{epoch} {iter_num} {out['train']:.6f} {out['val']:.6f} {dt*1000:.2f}")
+            elif iter_num % cfg.log_interval == 0:
+                lossf = loss.item()
+                # log the training loss
+                fabric.log_dict({"train": loss.item(), "val": -1.0, "dt": dt_tr}, step=iter_num)
+            else:
+                pass
 
 
 @hydra.main(version_base=None, config_path="configs", config_name="train.yaml")
