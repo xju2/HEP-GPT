@@ -108,7 +108,7 @@ class TrackMLReader(object):
             print("using {} workers to process the data".format(self.num_workers))
 
             # use the concurrent futures to speed up the processing
-            with concurrent.futures.ThreadPoolExecutor(max_workers=self.num_workers) as executor:
+            with concurrent.futures.ProcessPoolExecutor(max_workers=self.num_workers) as executor:
                 all_tracks = executor.map(self.convert_one_event, range(start_evt, end_evt))
         else:
             all_tracks = [self.convert_one_event(idx) for idx in range(start_evt, end_evt)]
