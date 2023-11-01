@@ -45,7 +45,7 @@ class TrackDataSet(Dataset):
         self.name = name
 
         self.data = np.memmap(inputfile, dtype=np.uint16, mode='r')
-        print(f"Total number of tokens in {self.name} dataset: {len(self.data):,d}")
+        log.info(f"Total number of tokens in {self.name} dataset: {len(self.data):,d}")
 
     def __len__(self):
         return self.data.shape[0] // self.block_size
@@ -78,13 +78,13 @@ def main(cfg: DictConfig) -> None:
     dtype = "bfloat16" if torch.cuda.is_available() and torch.cuda.is_bf16_supported() else 'float32'
 
     device_type = fabric.device
-    fabric.print("device: ", device_type)
+    log.info("device: {}[{}]".format(device_type.type, device_type.index))
 
     gpt_config = GPTConfig(**cfg.model)
     model = GPT(gpt_config)
 
     if cfg.compile:
-        fabric.print("compiling the model... (takes a ~minute)")
+        log.info("compiling the model... (takes a ~minute)")
         unoptimized_model = model
         model = torch.compile(model)  # require Pytorch 2.0
 
@@ -121,7 +121,7 @@ def main(cfg: DictConfig) -> None:
         fabric.load(cfg.ckpt_path, state)
 
     outdir = Path(cfg.paths.output_dir)
-    fabric.print(f"output directionary: {outdir}")
+    log.info(f"output directionary: {outdir}")
 
     iter_num = 0
     best_val_loss = 9999999
@@ -178,8 +178,7 @@ def main(cfg: DictConfig) -> None:
                     best_val_step = iter_num
                     fabric.save(outdir / "best.ckpt", state)
                     fabric.save(outdir / f"ckpt-{iter_num}.ckpt", state)
-                    fabric.print(f">>> epoch {epoch}, iter {iter_num},",
-                                 "train {0[train]:.4f}, val {0[val]:.4f}".format(out))
+
                     t1 = time.time()
                     dt = t1 - t0
                     t0 = t1
@@ -195,7 +194,7 @@ def main(cfg: DictConfig) -> None:
 @hydra.main(version_base=None, config_path="configs", config_name="train.yaml")
 def training(cfg : DictConfig) -> None:
     if cfg.dry_run:
-        print(OmegaConf.to_yaml(cfg))
+        log.info(OmegaConf.to_yaml(cfg))
         return
 
     main(cfg)
