@@ -8,19 +8,25 @@ root = pyrootutils.setup_root(
 )
 
 from pathlib import Path
+from typing import List
+import numpy as np
 
 import hydra
 from omegaconf import DictConfig, OmegaConf
 
-import numpy as np
 from lightning.fabric import Fabric
-
-from model import GPTConfig, GPT
+from lightning.fabric.loggers import Logger
 
 import torch
 from torch.utils.data import Dataset
 from torch.utils.data import DataLoader
 
+# local imports
+from model import GPTConfig, GPT
+from src.utils.utils import instantiate_loggers
+from src.utils.pylogger import get_pylogger
+
+log = get_pylogger(__name__)
 
 class TrackDataSet(Dataset):
     def __init__(self, inputfile: str,
@@ -38,7 +44,7 @@ class TrackDataSet(Dataset):
         self.name = name
 
         self.data = np.memmap(inputfile, dtype=np.uint16, mode='r')
-        print(f"Total number of tokens in {self.name} dataset: {len(self.data)}")
+        print(f"Total number of tokens in {self.name} dataset: {len(self.data):,d}")
 
     def __len__(self):
         return self.data.shape[0] // self.block_size
@@ -60,9 +66,9 @@ class TrackDataSet(Dataset):
 def main(cfg: DictConfig) -> None:
     # torch precision settings
     torch.set_float32_matmul_precision("medium")
+    loggers: List[Logger] = instantiate_loggers(cfg.loggers)
 
-
-    fabric: Fabric = hydra.utils.instantiate(cfg.fabric)
+    fabric: Fabric = hydra.utils.instantiate(cfg.fabric, loggers=loggers)
     fabric.launch()
 
     if cfg.get("seed"):
@@ -156,14 +162,17 @@ def main(cfg: DictConfig) -> None:
                         losses[i] = loss.item()
 
                     out[loader_name] = losses.mean().item()
-                fabric.print(f"epoch {epoch}, iter {iter_num},", "train-loss {0[train]:.4f}, val-loss {0[val]:.4f}".format(out))
                 model.train()
+
+                fabric.log_dict(out)
 
                 if out["val"] < best_val_loss:
                     best_val_loss = out["val"]
                     best_val_step = iter_num
                     fabric.save(outdir / "best.ckpt", state)
                     fabric.save(outdir / f"ckpt-{iter_num}.ckpt", state)
+                    fabric.print(f">>> epoch {epoch}, iter {iter_num},",
+                                 "train {0[train]:.4f}, val {0[val]:.4f}".format(out))
 
 
 @hydra.main(version_base=None, config_path="configs", config_name="train.yaml")

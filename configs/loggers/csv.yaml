@@ -1,0 +1,8 @@
+csv:
+  _target_: lightning.fabric.loggers.CSVLogger
+
+  root_dir: ${paths.output_dir}
+  name: 'csv/'
+  version: 1
+  prefix: ""
+  flush_logs_every_n_steps: 100

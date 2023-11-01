@@ -4,6 +4,7 @@
 defaults:
   - _self_
   - paths: default.yaml
+  - loggers: csv.yaml
   - data: default.yaml
   - fabric: gpu.yaml
 
@@ -11,14 +12,10 @@ dry_run: False  # if True, only print the config and exit
 
 seed: 12345  # random seed for reproducibility
 log_interval: 200  # in terms of iterations
-max_epochs: 100
 
-# wandb logging
-wandb_log: False # disabled by default
-wandb_project: 'owt'
-wandb_run_name: 'gpt2' # 'run' + str(time.time())
-
-
+# stopping criteria
+max_epochs: 1   # maximum number of epochs to run for
+# max_iterations: 10_000  # maximum number of iterations to run for
 
 # system
 compile: False  # not working yet!

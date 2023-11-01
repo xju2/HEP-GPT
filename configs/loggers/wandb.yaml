@@ -1,0 +1,18 @@
+wandb:
+  _target_: lightning.pytorch.loggers.WandbLogger
+  save_dir: ${paths.output_dir}
+  version: null
+  offline: False
+
+  anonymous: null # enable anonymous logging
+  log_model: False  # upload lightning ckpts, "all": ckpt logged during training, True: ckpt loged at the end of training
+
+  prefix: "" # a string to put at the beginning of metric keys
+  checkpoint_name: null
+
+  # other arguments passed to `wandb.init()`
+  group: ""
+  job_type: ""
+  project: "HEP-GPT"
+  tags: []
+  name: ""  # give a name to your wandb run
