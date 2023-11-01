@@ -1,0 +1,5 @@
+defaults:
+  - gpu.yaml
+
+devices: 4
+strategy: fsdp

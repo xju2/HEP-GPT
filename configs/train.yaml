@@ -7,7 +7,7 @@ defaults:
   - data: default.yaml
   - fabric: default.yaml
 
-
+dry_run: True  # if True, only print the config and exit
 seed: 12345  # random seed for reproducibility
 log_interval: 200  # in terms of iterations
 max_epochs: 100

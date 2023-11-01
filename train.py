@@ -58,11 +58,9 @@ class TrackDataSet(Dataset):
 
 
 def main(cfg: DictConfig) -> None:
-    fabric_args = cfg.fabric if cfg.fabric else {}
 
-    num_workers = cfg.data.num_workers
 
-    fabric = Fabric(**fabric_args)
+    fabric: Fabric = hydra.utils.instantiate(cfg.fabric)
     fabric.launch()
 
     if cfg.get("seed"):
@@ -82,10 +80,11 @@ def main(cfg: DictConfig) -> None:
         model = torch.compile(model)  # require Pytorch 2.0
 
     optimizer = model.configure_optimizers(cfg.optimizer, device_type)
+    num_workers = cfg.data.num_workers
     train_dataset = TrackDataSet(cfg.data.train_data, cfg.training.batch_size,
                                  cfg.training.block_size, do_randomize=True,
-                                 name="train"
-                                )
+                                 name="train")
+
     train_dataloader = DataLoader(train_dataset,
                                   batch_size=cfg.training.batch_size,
                                   shuffle=True,
@@ -165,7 +164,10 @@ def main(cfg: DictConfig) -> None:
 
 @hydra.main(version_base=None, config_path="configs", config_name="train.yaml")
 def training(cfg : DictConfig) -> None:
-    print(OmegaConf.to_yaml(cfg))
+    if cfg.dry_run:
+        print(OmegaConf.to_yaml(cfg))
+        return
+
     main(cfg)
 
 if __name__ == "__main__":

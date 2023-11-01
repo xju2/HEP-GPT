@@ -1,0 +1,8 @@
+defaults:
+  - gpu.yaml
+
+devices: 4
+strategy: deepspeed
+# strategy:
+#   _target_: lightning.fabric.strategies.DeepSpeedStrategy
+#   stage: 2
