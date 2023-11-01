@@ -15,6 +15,7 @@ from pathlib import Path
 import glob
 import re
 import pickle
+import concurrent.futures
 
 import numpy as np
 import pandas as pd
@@ -33,8 +34,11 @@ class TrackMLReader(object):
     def __init__(self, inputdir: Union[str, Path],
                  outputdir: Union[str, Path],
                  name="TrackMLReader",
-                 is_codalab_data: bool = True) -> None:
-        self.name = name
+                 is_codalab_data: bool = True,
+                 num_workers: int = 1,
+                 min_truth_hits: int = 4,
+                 with_padding: bool = False,
+                 ) -> None:
         self.inputdir = Path(inputdir) if isinstance(inputdir, str) else inputdir
         if not self.inputdir.exists() or not self.inputdir.is_dir():
             raise FileNotFoundError(f"Input directory {self.inputdir} does not exist or is not a directory.")
@@ -73,6 +77,11 @@ class TrackMLReader(object):
 
         self.build_detector_vocabulary(detector)
 
+        self.name = name
+        self.num_workers = num_workers
+        self.min_truth_hits = min_truth_hits
+        self.with_padding = with_padding
+
     def build_detector_vocabulary(self, detector):
         """Build the detector vocabulary."""
         detector_umid = np.stack([detector.volume_id, detector.layer_id, detector.module_id], axis=1)
@@ -94,25 +103,38 @@ class TrackMLReader(object):
                      offset_umid: int = UNKNOWN_TOKEN):
         """Prepare the data for training."""
         assert end_evt > start_evt and self.nevts >= end_evt, "not enough events."
-        all_tracks = []
-        for idx in range(start_evt, end_evt):
-            hits = self.read_event(reader.all_evtids[idx])
-            hits = hits[hits.nhits >= min_truth_hits]
 
-            vlid_groups = hits.groupby("particle_id")
-            tracks = [[TRACK_START_TOKEN] + vlid_groups.get_group(vlid).umid.map(
-                lambda x: x + offset_umid).to_list() + [TRACK_END_TOKEN]
-                for vlid in vlid_groups.groups.keys()]
-            # flatten the list
-            tracks = [item for sublist in tracks for item in sublist]
-            if with_padding:
-                all_tracks += [track + [PAD_TOKEN] * (block_size - len(track)) for track in tracks]
-            else:
-                all_tracks += tracks
+        if self.num_workers > 1:
+            print("using {} workers to process the data".format(self.num_workers))
 
+            # use the concurrent futures to speed up the processing
+            with concurrent.futures.ThreadPoolExecutor(max_workers=self.num_workers) as executor:
+                all_tracks = executor.map(self.convert_one_event, range(start_evt, end_evt))
+        else:
+            all_tracks = [self.convert_one_event(idx) for idx in range(start_evt, end_evt)]
+
+        all_tracks = [item for sublist in all_tracks for item in sublist]
         all_tracks = np.array(all_tracks, dtype=np.uint16)
         return all_tracks
 
+    def convert_one_event(self, idx: int):
+        """Convert a given event index to a list of tokens."""
+
+        hits = self.read_event(reader.all_evtids[idx])
+        hits = hits[hits.nhits >= self.min_truth_hits]
+
+        vlid_groups = hits.groupby("particle_id")
+        tracks = [[TRACK_START_TOKEN] + vlid_groups.get_group(vlid).umid.map(
+            lambda x: x + UNKNOWN_TOKEN).to_list() + [TRACK_END_TOKEN]
+            for vlid in vlid_groups.groups.keys()]
+        # flatten the list
+        tracks = [item for sublist in tracks for item in sublist]
+        if self.with_padding:
+            tracks = [track + [PAD_TOKEN] * (block_size - len(track)) for track in tracks]
+
+        # flatten the list
+        tracks = [item for sublist in tracks for item in sublist]
+        return tracks
 
     def read_event(self, evtid: int = None) -> bool:
         """Read one event from the input directory"""
@@ -175,12 +197,14 @@ if __name__ == '__main__':
     add_arg = parser.add_argument
     add_arg('inputdir', help='Input directory')
     add_arg('outputdir', help='Output directory')
+    add_arg('-w', '--num_workers', type=int, default=1,)
     args = parser.parse_args()
 
-    reader = TrackMLReader(args.inputdir, args.outputdir)
+    reader = TrackMLReader(args.inputdir, args.outputdir,
+                           num_workers=args.num_workers)
     reader.run(
         {
-            "train": (0, 10),
-            "val": (10, 12),
+            "train": (0, 1000),
+            "val": (1000, 1100),
         }
     )
