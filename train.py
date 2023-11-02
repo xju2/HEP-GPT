@@ -29,40 +29,6 @@ from src.utils.pylogger import get_pylogger
 
 log = get_pylogger(__name__)
 
-class TrackDataSet(Dataset):
-    def __init__(self, inputfile: str,
-                 batch_size: int, block_size: int,
-                 do_randomize: bool = False,
-                 transform=None, target_transform=None,
-                 name="TrackDataSet"):
-        self.inputfile = inputfile
-        self.batch_size = batch_size
-        self.block_size = block_size
-        self.do_randomize = do_randomize
-
-        self.transform = transform
-        self.target_transform = target_transform
-        self.name = name
-
-        self.data = np.memmap(inputfile, dtype=np.uint16, mode='r')
-        log.info(f"Total number of tokens in {self.name} dataset: {len(self.data):,d}")
-
-    def __len__(self):
-        return self.data.shape[0] // self.block_size
-
-    def __getitem__(self, idx):
-        data, block_size, batch_size = self.data, self.block_size, self.batch_size
-
-        if self.do_randomize:
-            ix = torch.randint(len(data) - block_size, (1,)).item()
-            x = torch.from_numpy((data[ix: ix + block_size]).astype(np.int64))
-            y = torch.from_numpy((data[ix + 1 : ix + 1 + block_size]).astype(np.int64))
-        else:
-            start_idx = idx * block_size
-            x = torch.from_numpy((data[start_idx : start_idx + block_size]).astype(np.int64))
-            y = torch.from_numpy((data[start_idx + 1 : start_idx + 1 + block_size]).astype(np.int64))
-        return x, y
-
 
 def main(cfg: DictConfig) -> None:
     # torch precision settings
@@ -90,23 +56,11 @@ def main(cfg: DictConfig) -> None:
 
     optimizer = model.configure_optimizers(cfg.optimizer, device_type)
 
-    num_workers = cfg.data.num_workers
+    data_module = hydra.utils.instantiate(cfg.datamodules)
+    data_module.setup("fit")
 
-    train_dataset = TrackDataSet(cfg.data.train_data, cfg.training.batch_size,
-                                 cfg.training.block_size, do_randomize=True,
-                                 name="train")
-    train_dataloader = DataLoader(train_dataset,
-                                  batch_size=cfg.training.batch_size,
-                                  shuffle=True,
-                                  num_workers=num_workers)
-
-    val_dataset = TrackDataSet(cfg.data.val_data, cfg.training.batch_size,
-                               cfg.training.block_size, do_randomize=True,
-                               name="val")
-    val_dataloader = DataLoader(val_dataset,
-                                batch_size=cfg.training.batch_size,
-                                shuffle=False,
-                                num_workers=num_workers)
+    train_dataloader = data_module.train_dataloader()
+    val_dataloader = data_module.val_dataloader()
 
     model, optimizer = fabric.setup(model, optimizer)
     train_dataloader = fabric.setup_dataloaders(train_dataloader)

@@ -1,3 +1,0 @@
-train_data: ${paths.data_dir}/trackml/train.bin
-val_data: ${paths.data_dir}/trackml/val.bin
-num_workers: 1  # number of workers for the data loader
