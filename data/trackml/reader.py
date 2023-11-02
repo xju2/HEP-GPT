@@ -127,8 +127,7 @@ class TrackMLReader(object):
         tracks = [[TRACK_START_TOKEN] + vlid_groups.get_group(vlid).umid.map(
             lambda x: x + UNKNOWN_TOKEN).to_list() + [TRACK_END_TOKEN]
             for vlid in vlid_groups.groups.keys()]
-        # flatten the list
-        tracks = [item for sublist in tracks for item in sublist]
+
         if self.with_padding:
             tracks = [track + [PAD_TOKEN] * (block_size - len(track)) for track in tracks]
 
