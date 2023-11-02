@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH -A m3443_g
 #SBATCH -C gpu
-#SBATCH -q regular
+#SBATCH -q shared
 #SBATCH -c 32
 #SBATCH --gpu-bind=none
 #SBATCH -o logs/%x-%j.out
@@ -25,4 +25,3 @@ mkdir -p logs
 # export NCCL_SOCKET_IFNAME=^docker0,lo
 
 srun python train.py training.batch_size=200 training.block_size=20 compile=True max_epochs=100
-
