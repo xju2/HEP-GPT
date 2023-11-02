@@ -46,11 +46,6 @@ def main(cfg: DictConfig) -> None:
     gpt_config = GPTConfig(**cfg.model)
     model = GPT(gpt_config)
 
-    if cfg.compile:
-        log.info("compiling the model... (takes a ~minute)")
-        unoptimized_model = model
-        model = torch.compile(model)  # require Pytorch 2.0
-
     optimizer = model.configure_optimizers(cfg.optimizer, device_type)
 
     data_module = hydra.utils.instantiate(cfg.data)
@@ -59,7 +54,15 @@ def main(cfg: DictConfig) -> None:
     train_dataloader = data_module.train_dataloader()
     val_dataloader = data_module.val_dataloader()
 
+    # see issue #62 about compiling the model for FSDP strategy
+    # https://github.com/Lightning-AI/lit-llama/issues/62
+    if cfg.compile:
+        log.info("compiling the model... (takes a ~minute)")
+        unoptimized_model = model
+        model = torch.compile(model)  # require Pytorch 2.0
+    model.train()
     model, optimizer = fabric.setup(model, optimizer)
+
     train_dataloader = fabric.setup_dataloaders(train_dataloader)
     val_dataloader = fabric.setup_dataloaders(val_dataloader)
 
@@ -67,7 +70,6 @@ def main(cfg: DictConfig) -> None:
         "model": model,
         "optimizer": optimizer,
     }
-
     if cfg.init_from == "resume" and Path(cfg.ckpt_path).exists():
         fabric.load(cfg.ckpt_path, state)
 
