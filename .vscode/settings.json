@@ -1,5 +1,4 @@
 {
-    "python.linting.flake8Enabled": true,
-    "python.linting.enabled": true,
     "files.trimTrailingWhitespace": true,
+    "python.defaultInterpreterPath": "/pscratch/sd/x/xju/venv/llm/bin/python",
 }
