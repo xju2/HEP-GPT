@@ -9,3 +9,4 @@ wandb
 tqdm
 pyrootutils  # standardizing the project root setup
 flake8
+jupyterlab
