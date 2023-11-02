@@ -10,7 +10,6 @@ root = pyrootutils.setup_root(
 from pathlib import Path
 from typing import List
 import time
-import numpy as np
 
 import hydra
 from omegaconf import DictConfig, OmegaConf
@@ -19,8 +18,6 @@ from lightning.fabric import Fabric
 from lightning.fabric.loggers import Logger
 
 import torch
-from torch.utils.data import Dataset
-from torch.utils.data import DataLoader
 
 # local imports
 from model import GPTConfig, GPT
@@ -56,7 +53,7 @@ def main(cfg: DictConfig) -> None:
 
     optimizer = model.configure_optimizers(cfg.optimizer, device_type)
 
-    data_module = hydra.utils.instantiate(cfg.datamodules)
+    data_module = hydra.utils.instantiate(cfg.data)
     data_module.setup("fit")
 
     train_dataloader = data_module.train_dataloader()

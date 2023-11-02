@@ -203,7 +203,7 @@ if __name__ == '__main__':
                            num_workers=args.num_workers)
     reader.run(
         {
-            "train": (0, 1000),
-            "val": (1000, 1100),
+            "train": (0, 20),
+            "val": (20, 40),
         }
     )
