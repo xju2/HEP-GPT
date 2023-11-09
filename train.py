@@ -36,7 +36,7 @@ def main(cfg: DictConfig) -> None:
     fabric.launch()
 
     if cfg.get("seed"):
-        fabric.seed_everything(1234)
+        fabric.seed_everything(cfg.seed)
 
     dtype = "bfloat16" if torch.cuda.is_available() and torch.cuda.is_bf16_supported() else 'float32'
 
