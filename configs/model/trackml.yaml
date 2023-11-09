@@ -1,0 +1,7 @@
+block_size: 20
+vocab_size: 18737
+n_layer: 12
+n_head: 16
+n_embd: 256
+dropout: 0
+bias: False

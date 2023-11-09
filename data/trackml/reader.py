@@ -191,6 +191,7 @@ class TrackMLReader(object):
             'itos': itos,
             'stoi': stoi,
         }
+        logging.info("vocab size: {}".format(meta['vocab_size']))
         with open(self.outputdir / 'meta.pkl', 'wb') as f:
             pickle.dump(meta, f)
 

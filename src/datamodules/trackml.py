@@ -1,4 +1,7 @@
 from typing import Optional
+from pathlib import Path
+import pickle
+from dataclasses import dataclass
 
 import numpy as np
 import torch
@@ -15,8 +18,10 @@ class TrackMLDataSet(Dataset):
     def __init__(self, inputfile: str,
                  batch_size: int, block_size: int,
                  do_randomize: bool = False,
-                 transform=None, target_transform=None,
-                 name="TrackDataSet"):
+                 transform=None,
+                 target_transform=None,
+                 name="TrackDataSet",
+                 **kwargs):
         self.inputfile = inputfile
         self.batch_size = batch_size
         self.block_size = block_size
@@ -50,6 +55,8 @@ class TrackMLDataModule(pl.LightningDataModule):
     def __init__(self,
                  train_data: str,
                  val_data: str,
+                 test_data: str,
+                 meta_data: str,
                  batch_size: int,
                  block_size: int,
                  num_workers: int = 1,
@@ -63,6 +70,16 @@ class TrackMLDataModule(pl.LightningDataModule):
             'pin_memory': True,
             'shuffle': True,
         }
+        self.read_meta_data()
+
+    def read_meta_data(self):
+        if Path(self.hparams.meta_data).exists():
+            with open(self.hparams.meta_data, "rb") as f:
+                meta_data = pickle.load(f)
+            self.vocab_size = meta_data["vocab_size"]
+        else:
+            log.error(f"meta data file {self.hparams.meta_data} does not exist.")
+            self.vocab_size = 0
 
     def setup(self, stage: Optional[str] = None):
         # Assign train/val datasets for use in dataloaders
@@ -73,6 +90,14 @@ class TrackMLDataModule(pl.LightningDataModule):
             self.val_dataset = TrackMLDataSet(self.hparams.val_data, self.hparams.batch_size,
                                               self.hparams.block_size, self.hparams.do_randomize,
                                               name="val")
+
+        # Assign test dataset for use in dataloader(s)
+        if stage == "test":
+            self.test_dataset = TrackMLDataSet(self.hparams.test_data, self.hparams.batch_size,
+                                               self.hparams.block_size, self.hparams.do_randomize,
+                                               name="test")
+        if stage == "predict":
+            raise NotImplementedError("predict stage is not implemented yet.")
 
     def train_dataloader(self):
         return DataLoader(self.train_dataset, **self.loader_kwargs)

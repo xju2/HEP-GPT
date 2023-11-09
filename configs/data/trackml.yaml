@@ -2,7 +2,9 @@ _target_: src.datamodules.TrackMLDataModule
 
 train_data: ${paths.data_dir}/trackml/train.bin
 val_data: ${paths.data_dir}/trackml/val.bin
+test_data: ${paths.data_dir}/trackml/test.bin
+meta_data: ${paths.data_dir}/trackml/meta.pkl
 batch_size: ${training.batch_size}
-block_size: ${training.block_size}
+block_size: ${model.block_size}
 num_workers: 1  # number of workers for the data loader
 do_randomize: True # randomize the order of the blocks
