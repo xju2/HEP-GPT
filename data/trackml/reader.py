@@ -16,6 +16,7 @@ import glob
 import re
 import pickle
 import concurrent.futures
+import logging
 
 import numpy as np
 import pandas as pd
@@ -102,7 +103,10 @@ class TrackMLReader(object):
                      with_padding: bool = False,
                      offset_umid: int = UNKNOWN_TOKEN):
         """Prepare the data for training."""
-        assert end_evt > start_evt and self.nevts >= end_evt, "not enough events."
+        if end_evt <= start_evt or self.nevts < end_evt:
+            logging.error("invalid start_evt {} or end_evt {}".format(
+                start_evt, end_evt))
+            return
 
         if self.num_workers > 1:
             print("using {} workers to process the data".format(self.num_workers))
@@ -197,13 +201,17 @@ if __name__ == '__main__':
     add_arg('inputdir', help='Input directory')
     add_arg('outputdir', help='Output directory')
     add_arg('-w', '--num_workers', type=int, default=1,)
+    add_arg("--num-train", type=int, default=20, help="Number of training events")
+    add_arg("--num-val", type=int, default=20, help="Number of validation events")
+    add_arg("--num-test", type=int, default=0, help="Number of test events")
     args = parser.parse_args()
 
     reader = TrackMLReader(args.inputdir, args.outputdir,
                            num_workers=args.num_workers)
     reader.run(
         {
-            "train": (0, 20),
-            "val": (20, 40),
+            "train": (0, args.num_train),
+            "val": (args.num_train, args.num_train + args.num_val),
+            "test": (args.num_train + args.num_val, args.num_train + args.num_val + args.num_test),
         }
     )

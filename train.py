@@ -75,6 +75,8 @@ def main(cfg: DictConfig) -> None:
 
     outdir = Path(cfg.paths.output_dir)
     log.info(f"output directionary: {outdir}")
+    ckpt_dir = outdir / "checkpoints"
+    ckpt_dir.mkdir(parents=True, exist_ok=True)
 
     iter_num = 0
     best_val_loss = 9999999
@@ -130,14 +132,13 @@ def main(cfg: DictConfig) -> None:
                     best_val_loss = out["val"]
                     best_val_step = iter_num
                     fabric.save(outdir / "best.ckpt", state)
-                    fabric.save(outdir / f"ckpt-{iter_num}.ckpt", state)
+                    fabric.save(ckpt_dir / f"ckpt-{iter_num}.ckpt", state)
 
                     t1 = time.time()
                     dt = t1 - t0
                     t0 = t1
                     log.info(f"{epoch} {iter_num} {out['train']:.6f} {out['val']:.6f} {dt*1000:.2f}")
             elif iter_num % cfg.log_interval == 0:
-                lossf = loss.item()
                 # log the training loss
                 fabric.log_dict({"train": loss.item(), "val": -1.0, "dt": dt_tr}, step=iter_num)
             else:
