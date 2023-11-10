@@ -77,6 +77,7 @@ class TrackMLReader(object):
                                                 "pitchY": "pitch_v"})
 
         self.build_detector_vocabulary(detector)
+        self.detector = detector
 
         self.name = name
         self.num_workers = num_workers
@@ -106,7 +107,7 @@ class TrackMLReader(object):
         if end_evt <= start_evt or self.nevts < end_evt:
             logging.error("invalid start_evt {} or end_evt {}".format(
                 start_evt, end_evt))
-            return
+            return None
 
         if self.num_workers > 1:
             print("using {} workers to process the data".format(self.num_workers))
@@ -179,8 +180,9 @@ class TrackMLReader(object):
         for k, v in config.items():
             print("processing {:,} events for {}".format(v[1] - v[0], k))
             data = self.prepare_data(v[0], v[1])
-            data.tofile(self.outputdir / "{}.bin".format(k))
-            print("saved {:,} tokens for {}".format(data.shape[0], k))
+            if data is not None:
+                data.tofile(self.outputdir / "{}.bin".format(k))
+                print("saved {:,} tokens for {}".format(data.shape[0], k))
 
         # save the meta information
         stoi = self.umid_dict

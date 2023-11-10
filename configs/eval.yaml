@@ -1,0 +1,20 @@
+# @package _global_
+
+# specify default configurations
+defaults:
+  - _self_
+  - paths: default.yaml
+  - loggers: csv.yaml
+  - fabric: gpu.yaml
+  - model: trackml.yaml
+
+data_path: data/trackml/val.bin
+detector_path: /global/cfs/cdirs/m3443/data/trackml-codalab/detector.csv
+dry_run: False  # if True, only print the config and exit
+seed: 12345  # random seed for reproducibility
+compile: False
+ckpt_path: ? # path to the checkpoint to resume from
+
+num_of_seeds: 3
+min_num_of_hits: 9
+max_new_tokens: 20

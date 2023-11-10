@@ -19,11 +19,11 @@ max_epochs: 100   # maximum number of epochs to run for
 # max_iterations: 10_000  # maximum number of iterations to run for
 
 # system
-compile: False  # not working yet!
+compile: False
 always_save_checkpoint: True # if True, always save a checkpoint after each eval
 
 init_from: 'scratch' # 'scratch' or 'resume' or 'gpt2*'
-ckpt_path: ${paths.output_dir}/best.ckpt # path to the checkpoint to resume from
+ckpt_path: null # path to the checkpoint to resume from
 
 
 # training
