@@ -39,6 +39,7 @@ class TrackMLReader(object):
                  num_workers: int = 1,
                  min_truth_hits: int = 4,
                  with_padding: bool = False,
+                 outname_prefix: str = "",
                  ) -> None:
         self.inputdir = Path(inputdir) if isinstance(inputdir, str) else inputdir
         if not self.inputdir.exists() or not self.inputdir.is_dir():
@@ -83,6 +84,7 @@ class TrackMLReader(object):
         self.num_workers = num_workers
         self.min_truth_hits = min_truth_hits
         self.with_padding = with_padding
+        self.outname_prefix = outname_prefix + "_" if outname_prefix else ""
 
     def build_detector_vocabulary(self, detector):
         """Build the detector vocabulary."""
@@ -178,10 +180,11 @@ class TrackMLReader(object):
         """
 
         for k, v in config.items():
-            print("processing {:,} events for {}".format(v[1] - v[0], k))
+            num_evts = v[1] - v[0]
+            print("processing {:,} events for {}".format(num_evts, k))
             data = self.prepare_data(v[0], v[1])
             if data is not None:
-                data.tofile(self.outputdir / "{}.bin".format(k))
+                data.tofile(self.outputdir / f"{self.outname_prefix}evt{num_evts}_{k}.bin")
                 print("saved {:,} tokens for {}".format(data.shape[0], k))
 
         # save the meta information
@@ -207,10 +210,15 @@ if __name__ == '__main__':
     add_arg("--num-train", type=int, default=20, help="Number of training events")
     add_arg("--num-val", type=int, default=20, help="Number of validation events")
     add_arg("--num-test", type=int, default=0, help="Number of test events")
+    add_arg("--padding", action="store_true", help="Whether to pad the tracks to the same length")
+    add_arg("--prefix", type=str, default="", help="Prefix for the output files")
     args = parser.parse_args()
 
     reader = TrackMLReader(args.inputdir, args.outputdir,
-                           num_workers=args.num_workers)
+                           num_workers=args.num_workers,
+                           with_padding=args.padding,
+                           outname_prefix=args.prefix
+                           )
     reader.run(
         {
             "train": (0, args.num_train),
