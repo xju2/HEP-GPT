@@ -17,6 +17,7 @@ import re
 import pickle
 import concurrent.futures
 import logging
+logging.basicConfig(filename='reader.log', encoding='utf-8', level=logging.DEBUG)
 
 import numpy as np
 import pandas as pd
@@ -29,7 +30,7 @@ TRACK_HOLE_TOKEN = 5
 MASK_TOKEN = 6
 PAD_TOKEN = 7
 UNKNOWN_TOKEN = 8
-block_size = 18 + 2  # maximum number of hits for one track + START + END
+block_size = 20 + 2  # maximum number of hits for one track + START + END
 
 class TrackMLReader(object):
     def __init__(self, inputdir: Union[str, Path],
@@ -84,6 +85,10 @@ class TrackMLReader(object):
         self.num_workers = num_workers
         self.min_truth_hits = min_truth_hits
         self.with_padding = with_padding
+        if self.with_padding:
+            logging.warning(f"padding all tracks to the same length {block_size}")
+            logging.warning("tracks that are longer than {} will be discarded".format(block_size))
+
         self.outname_prefix = outname_prefix + "_" if outname_prefix else ""
 
     def build_detector_vocabulary(self, detector):
@@ -101,10 +106,7 @@ class TrackMLReader(object):
         # Inverting the umid_dict
         self.umid_dict_inv = {v: k for k, v in umid_dict.items()}
 
-    def prepare_data(self, start_evt: int, end_evt: int,
-                     min_truth_hits: int = 4,
-                     with_padding: bool = False,
-                     offset_umid: int = UNKNOWN_TOKEN):
+    def prepare_data(self, start_evt: int, end_evt: int):
         """Prepare the data for training."""
         if end_evt <= start_evt or self.nevts < end_evt:
             logging.error("invalid start_evt {} or end_evt {}".format(
@@ -136,7 +138,7 @@ class TrackMLReader(object):
             for vlid in vlid_groups.groups.keys()]
 
         if self.with_padding:
-            tracks = [track + [PAD_TOKEN] * (block_size - len(track)) for track in tracks]
+            tracks = [track + [PAD_TOKEN] * (block_size - len(track)) for track in tracks if len(track) <= block_size]
 
         # flatten the list
         tracks = [item for sublist in tracks for item in sublist]
