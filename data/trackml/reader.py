@@ -17,7 +17,12 @@ import re
 import pickle
 import concurrent.futures
 import logging
-logging.basicConfig(filename='reader.log', encoding='utf-8', level=logging.DEBUG)
+logging.basicConfig(
+    filename='reader.log', encoding='utf-8', level=logging.DEBUG,
+    format='[%(asctime)s %(levelname)s %(name)s]: %(message)s',
+    datefmt='%Y/%m/%d %I:%M:%S %p')
+
+logger = logging.getLogger(__name__)
 
 import numpy as np
 import pandas as pd
@@ -86,8 +91,8 @@ class TrackMLReader(object):
         self.min_truth_hits = min_truth_hits
         self.with_padding = with_padding
         if self.with_padding:
-            logging.warning(f"padding all tracks to the same length {block_size}")
-            logging.warning("tracks that are longer than {} will be discarded".format(block_size))
+            logger.warning(f"padding all tracks to the same length {block_size}")
+            logger.warning("tracks that are longer than {} will be discarded".format(block_size))
 
         self.outname_prefix = outname_prefix + "_" if outname_prefix else ""
 
@@ -109,7 +114,7 @@ class TrackMLReader(object):
     def prepare_data(self, start_evt: int, end_evt: int):
         """Prepare the data for training."""
         if end_evt <= start_evt or self.nevts < end_evt:
-            logging.error("invalid start_evt {} or end_evt {}".format(
+            logger.error("invalid start_evt {} or end_evt {}".format(
                 start_evt, end_evt))
             return None
 
@@ -198,7 +203,7 @@ class TrackMLReader(object):
             'itos': itos,
             'stoi': stoi,
         }
-        logging.info("vocab size: {}".format(meta['vocab_size']))
+        logger.info("vocab size: {}".format(meta['vocab_size']))
         with open(self.outputdir / 'meta.pkl', 'wb') as f:
             pickle.dump(meta, f)
 
