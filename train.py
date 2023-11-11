@@ -1,19 +1,19 @@
 import pyrootutils
-
 root = pyrootutils.setup_root(
     search_from=__file__,
     indicator=[".git", "pyproject.toml"],
     pythonpath=True,
     dotenv=True,
 )
+import hydra
+from omegaconf import DictConfig, OmegaConf
 
 from pathlib import Path
 from typing import List
 import time
+import signal
 
-import hydra
-from omegaconf import DictConfig, OmegaConf
-
+from lightning.fabric.plugins.environments.slurm import SLURMEnvironment
 from lightning.fabric import Fabric
 from lightning.fabric.loggers import Logger
 
@@ -32,7 +32,15 @@ def main(cfg: DictConfig) -> None:
     torch.set_float32_matmul_precision("medium")
     loggers: List[Logger] = instantiate_loggers(cfg.loggers)
 
-    fabric: Fabric = hydra.utils.instantiate(cfg.fabric, loggers=loggers[0])
+    # fabric plugins for slurm envionment
+    slurm_env = SLURMEnvironment(
+        auto_requeue=cfg.slurm.auto_requeue,
+        requeue_signal=signal.SIGUSR1)
+
+    fabric: Fabric = hydra.utils.instantiate(
+        cfg.fabric,
+        loggers=loggers[0],
+        plugins=[slurm_env])
     fabric.launch()
 
     if cfg.get("seed"):

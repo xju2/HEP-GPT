@@ -14,6 +14,9 @@ dry_run: False  # if True, only print the config and exit
 seed: 12345  # random seed for reproducibility
 log_interval: 200  # in terms of iterations
 
+slurm:
+  auto_requeue: False  # if True, requeue job if it gets cancelled
+
 # stopping criteria
 max_epochs: 100   # maximum number of epochs to run for
 # max_iterations: 10_000  # maximum number of iterations to run for
