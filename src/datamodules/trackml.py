@@ -35,7 +35,7 @@ class TrackMLDataSet(Dataset):
         log.info("Do randomize: {}".format(self.do_randomize))
 
     def __len__(self):
-        return self.data.shape[0] // self.block_size
+        return self.data.shape[0] // self.block_size - 1
 
     def __getitem__(self, idx: int):
         data, block_size = self.data, self.block_size
