@@ -71,6 +71,7 @@ def main(cfg: DictConfig) -> None:
         "optimizer": optimizer,
     }
     if cfg.init_from == "resume" and Path(cfg.ckpt_path).exists():
+        log.info(f"Resume the training from the checkpoint: {cfg.ckpt_path}")
         fabric.load(cfg.ckpt_path, state)
 
     outdir = Path(cfg.paths.output_dir)
