@@ -4,6 +4,7 @@
 #SBATCH -q regular
 #SBATCH -c 32
 #SBATCH --gpu-bind=none
+#SBATCH -L scratch,cfs
 #SBATCH -o logs/%x-%j.out
 #SBATCH --mail-type=ALL
 #SBATCH --time=24:00:00
@@ -13,6 +14,7 @@
 #SBATCH --ntasks-per-node=1
 #SBATCH -N 1
 #SBATCH -J gpt2-v2
+
 
 mkdir -p logs
 
