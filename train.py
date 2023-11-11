@@ -33,14 +33,13 @@ def main(cfg: DictConfig) -> None:
     loggers: List[Logger] = instantiate_loggers(cfg.loggers)
 
     # fabric plugins for slurm envionment
-    slurm_env = SLURMEnvironment(
-        auto_requeue=cfg.slurm.auto_requeue,
-        requeue_signal=signal.SIGUSR1)
+    # slurm_env = SLURMEnvironment(
+    #     auto_requeue=cfg.slurm.auto_requeue,
+    #     requeue_signal=signal.SIGUSR1)
 
     fabric: Fabric = hydra.utils.instantiate(
         cfg.fabric,
-        loggers=loggers[0],
-        plugins=[slurm_env])
+        loggers=loggers[0])
     fabric.launch()
 
     if cfg.get("seed"):
