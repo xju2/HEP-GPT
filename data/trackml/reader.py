@@ -16,12 +16,13 @@ import glob
 import re
 import pickle
 import concurrent.futures
+from dataclasses import dataclass
+
 import logging
 logging.basicConfig(
     filename='reader.log', encoding='utf-8', level=logging.DEBUG,
     format='[%(asctime)s %(levelname)s %(name)s]: %(message)s',
     datefmt='%Y/%m/%d %I:%M:%S %p')
-
 logger = logging.getLogger(__name__)
 
 import numpy as np
@@ -34,24 +35,38 @@ TRACK_END_TOKEN = 4
 TRACK_HOLE_TOKEN = 5
 MASK_TOKEN = 6
 PAD_TOKEN = 7
-UNKNOWN_TOKEN = 8
-block_size = 20 + 2  # maximum number of hits for one track + START + END
+EVENT_MASK_TOKEN = 8
+EVENT_PAD_TOKEN = 9
+NUM_TOKEN = 10
+UNKNOWN_TOKEN = 11
+
+BLOCK_SIZE = 20 + 2  # maximum number of hits for one track + START + END
+EVENT_BLOCK_SIZE = 20 * 10_000 + 2  # maximum number of hits for one event + START + END
+
+@dataclass
+class TrackMLReaderConfig:
+    inputdir: Union[str, Path]
+    outputdir: Union[str, Path]
+    name: str = "TrackMLReader"
+    is_codalab_data: bool = True
+    num_workers: int = 1
+    min_truth_hits: int = 4
+    with_padding: bool = False
+    outname_prefix: str = ""
+    with_event_tokens: bool = False
+    with_event_padding: bool = False
 
 class TrackMLReader(object):
-    def __init__(self, inputdir: Union[str, Path],
-                 outputdir: Union[str, Path],
-                 name="TrackMLReader",
-                 is_codalab_data: bool = True,
-                 num_workers: int = 1,
-                 min_truth_hits: int = 4,
-                 with_padding: bool = False,
-                 outname_prefix: str = "",
-                 ) -> None:
-        self.inputdir = Path(inputdir) if isinstance(inputdir, str) else inputdir
+    def __init__(self, config: TrackMLReaderConfig):
+        self.config = config
+        # print out the config
+        logger.info("config: {}".format(config))
+
+        self.inputdir = Path(config.inputdir) if isinstance(config.inputdir, str) else config.inputdir
         if not self.inputdir.exists() or not self.inputdir.is_dir():
             raise FileNotFoundError(f"Input directory {self.inputdir} does not exist or is not a directory.")
 
-        self.outputdir = Path(outputdir) if isinstance(outputdir, str) else outputdir
+        self.outputdir = Path(config.outputdir) if isinstance(config.outputdir, str) else config.outputdir
         if not self.outputdir.exists():
             self.outputdir.mkdir(parents=True)
 
@@ -79,22 +94,18 @@ class TrackMLReader(object):
         detector_path = os.path.join(self.inputdir, "../detector.csv")
         # load detector info
         detector = pd.read_csv(detector_path)
-        if is_codalab_data:
+        if self.config.is_codalab_data:
             detector = detector.rename(columns={"pitchX": 'pitch_u',
                                                 "pitchY": "pitch_v"})
 
         self.build_detector_vocabulary(detector)
         self.detector = detector
 
-        self.name = name
-        self.num_workers = num_workers
-        self.min_truth_hits = min_truth_hits
-        self.with_padding = with_padding
-        if self.with_padding:
-            logger.warning(f"padding all tracks to the same length {block_size}")
-            logger.warning("tracks that are longer than {} will be discarded".format(block_size))
+        if self.config.with_padding:
+            logger.warning(f"padding all tracks to the same length {BLOCK_SIZE}")
+            logger.warning("tracks that are longer than {} will be discarded".format(BLOCK_SIZE))
 
-        self.outname_prefix = outname_prefix + "_" if outname_prefix else ""
+        self.outname_prefix = self.config.outname_prefix + "_" if self.config.outname_prefix else ""
 
     def build_detector_vocabulary(self, detector):
         """Build the detector vocabulary."""
@@ -118,11 +129,11 @@ class TrackMLReader(object):
                 start_evt, end_evt))
             return None
 
-        if self.num_workers > 1:
-            print("using {} workers to process the data".format(self.num_workers))
+        if self.config.num_workers > 1:
+            print("using {} workers to process the data".format(self.config.num_workers))
 
             # use the concurrent futures to speed up the processing
-            with concurrent.futures.ProcessPoolExecutor(max_workers=self.num_workers) as executor:
+            with concurrent.futures.ProcessPoolExecutor(max_workers=self.config.num_workers) as executor:
                 all_tracks = executor.map(self.convert_one_event, range(start_evt, end_evt))
         else:
             all_tracks = [self.convert_one_event(idx) for idx in range(start_evt, end_evt)]
@@ -135,18 +146,25 @@ class TrackMLReader(object):
         """Convert a given event index to a list of tokens."""
 
         hits = self.read_event(reader.all_evtids[idx])
-        hits = hits[hits.nhits >= self.min_truth_hits]
+        hits = hits[hits.nhits >= self.config.min_truth_hits]
 
         vlid_groups = hits.groupby("particle_id")
         tracks = [[TRACK_START_TOKEN] + vlid_groups.get_group(vlid).umid.map(
             lambda x: x + UNKNOWN_TOKEN).to_list() + [TRACK_END_TOKEN]
             for vlid in vlid_groups.groups.keys()]
 
-        if self.with_padding:
-            tracks = [track + [PAD_TOKEN] * (block_size - len(track)) for track in tracks if len(track) <= block_size]
+        if self.config.with_padding:
+            tracks = [track + [PAD_TOKEN] * (BLOCK_SIZE - len(track)) for track in tracks if len(track) <= BLOCK_SIZE]
 
         # flatten the list
         tracks = [item for sublist in tracks for item in sublist]
+
+        if self.config.with_event_tokens:
+            tracks = [EVENT_START_TOKEN] + tracks + [EVENT_END_TOKEN]
+
+            if self.config.with_event_padding:
+                tracks = tracks + [EVENT_PAD_TOKEN] * (EVENT_BLOCK_SIZE - len(tracks)) if len(tracks) <= EVENT_BLOCK_SIZE else tracks[:EVENT_BLOCK_SIZE]
+
         return tracks
 
     def read_event(self, evtid: int = None) -> bool:
@@ -219,13 +237,21 @@ if __name__ == '__main__':
     add_arg("--num-test", type=int, default=0, help="Number of test events")
     add_arg("--padding", action="store_true", help="Whether to pad the tracks to the same length")
     add_arg("--prefix", type=str, default="", help="Prefix for the output files")
+    add_arg("--add-event-tokens", action="store_true", help="Whether to add event tokens")
+    add_arg("--add-event-padding", action="store_true", help="Whether to pad the events to the same length")
     args = parser.parse_args()
 
-    reader = TrackMLReader(args.inputdir, args.outputdir,
-                           num_workers=args.num_workers,
-                           with_padding=args.padding,
-                           outname_prefix=args.prefix
-                           )
+    config = TrackMLReaderConfig(
+        inputdir=args.inputdir,
+        outputdir=args.outputdir,
+        num_workers=args.num_workers,
+        with_padding=args.padding,
+        outname_prefix=args.prefix,
+        with_event_tokens=args.add_event_tokens,
+        with_event_padding=args.add_event_padding,
+    )
+
+    reader = TrackMLReader(config)
     reader.run(
         {
             "train": (0, args.num_train),
