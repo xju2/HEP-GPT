@@ -74,6 +74,11 @@ class GPT(nn.Module):
         self.model_type = "GPT"
         self.config = config
 
+        self.register_buffer(
+            "src_mask",
+            nn.Transformer.generate_square_subsequent_mask(config.block_size)
+        )
+
         # token embeddings, [B, T] -> [B, T, D]
         # B: batch size
         # T: block size
@@ -120,19 +125,15 @@ class GPT(nn.Module):
         n_params = sum(p.numel() for p in self.parameters())
         return n_params
 
-    def forward(self, idx: Tensor, src_mask: Tensor = None):
+    def forward(self, idx: Tensor):
         """
         Arguments:
             idx: Tensor, shape ``[batch_size, seq_len]``
-            src_mask: Tensor, shape ``[seq_len, seq_len]``
         """
         seq_len = idx.size(1)
         idx = self.tok_emb(idx) * math.sqrt(self.config.n_embd)
         idx = self.pos_emb(idx)
-        if src_mask is None:
-            device = idx.device
-            src_mask = nn.Transformer.generate_square_subsequent_mask(seq_len).to(device)
 
-        embedding = self.encoder(idx, mask=src_mask, is_causal=True)
+        embedding = self.encoder(idx, mask=self.src_mask, is_causal=True)
         logits = self.decoder(embedding)
         return logits
