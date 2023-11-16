@@ -167,7 +167,7 @@ def main(cfg: DictConfig) -> None:
                 pass
 
 
-@hydra.main(version_base="1.3", config_path=root / "configs", config_name="train_nano_gpt.yaml")
+@hydra.main(version_base="1.3", config_path=str(root / "configs"), config_name="train_nano_gpt.yaml")
 def training(cfg : DictConfig) -> None:
     if cfg.dry_run:
         log.info(OmegaConf.to_yaml(cfg))

@@ -4,10 +4,10 @@
 defaults:
   - _self_
   - paths: default.yaml
-  - loggers: csv.yaml
-  - data: trackml.yaml
+  - logger: csv.yaml
+  - datamodule: trackml.yaml
   - fabric: gpu.yaml
-  - model: trackml.yaml
+  - nanogpt: trackml.yaml
 
 dry_run: False  # if True, only print the config and exit
 
