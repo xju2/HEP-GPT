@@ -6,8 +6,8 @@ from importlib.util import find_spec
 
 import hydra
 from omegaconf import DictConfig
-from lightning.fabric.loggers import Logger
-from lightning.pytorch.utilities import rank_zero
+from lightning.pytorch.loggers.logger import Logger
+from lightning.pytorch.utilities.rank_zero import rank_zero_only
 from lightning.pytorch.callbacks import Callback
 
 # local imports
@@ -69,12 +69,12 @@ def task_wrapper(task_func: Callable) -> Callable:
 
     return wrap
 
-@rank_zero
+@rank_zero_only
 def save_file(path: Path, content: str):
     with open(path, "w") as f:
         f.write(content)
 
-@rank_zero
+@rank_zero_only
 def close_loggers():
     """Makes sure all loggers closed properly (prevents logging failure during multirun)."""
 

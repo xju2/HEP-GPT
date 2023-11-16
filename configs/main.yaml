@@ -1,0 +1,13 @@
+# @package _global_
+
+# specify default configurations
+# order of defaults determines the order in which configs override each other
+defaults:
+  - _self_
+  - datamodule: trackml.yaml
+  - model: trackml.yaml
+  - callbacks: default.yaml
+  - logger:  tensorboard.yaml  # set logger here or use command line (e.g. `python train.py logger=tensorboard`)
+  # - trainer: default.yaml
+  - paths: default.yaml
+  - hydra: default.yaml

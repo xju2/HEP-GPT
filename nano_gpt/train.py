@@ -11,21 +11,35 @@ from omegaconf import DictConfig, OmegaConf
 from pathlib import Path
 from typing import List
 import time
-import signal
 
-from lightning.fabric.plugins.environments.slurm import SLURMEnvironment
 from lightning.fabric import Fabric
 from lightning.fabric.loggers import Logger
 
 import torch
 
 # local imports
-from model import GPTConfig, GPT
-from src.utils.utils import instantiate_loggers
+from nano_gpt.model import GPTConfig, GPT
 from src.utils.pylogger import get_pylogger
 
 log = get_pylogger(__name__)
 
+def instantiate_loggers(logger_cfg: DictConfig) -> List[Logger]:
+    """Instantiates loggers from config."""
+    logger: List[Logger] = []
+
+    if not logger_cfg:
+        log.warning("Logger config is empty.")
+        return logger
+
+    if not isinstance(logger_cfg, DictConfig):
+        raise TypeError("Logger config must be a DictConfig!")
+
+    for _, lg_conf in logger_cfg.items():
+        if isinstance(lg_conf, DictConfig) and "_target_" in lg_conf:
+            log.info(f"Instantiating logger <{lg_conf._target_}>")
+            logger.append(hydra.utils.instantiate(lg_conf))
+
+    return logger
 
 def main(cfg: DictConfig) -> None:
     # torch precision settings
@@ -153,7 +167,7 @@ def main(cfg: DictConfig) -> None:
                 pass
 
 
-@hydra.main(version_base=None, config_path="configs", config_name="train.yaml")
+@hydra.main(version_base="1.3", config_path=root / "configs", config_name="train_nano_gpt.yaml")
 def training(cfg : DictConfig) -> None:
     if cfg.dry_run:
         log.info(OmegaConf.to_yaml(cfg))

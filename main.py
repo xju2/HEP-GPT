@@ -20,7 +20,7 @@ from lightning.pytorch.loggers.logger import Logger
 from lightning.pytorch.callbacks import Callback
 
 
-from src import utils
+from src.utils import utils
 
 log = utils.get_pylogger(__name__)
 
@@ -75,7 +75,7 @@ def main(cfg: DictConfig) -> Tuple[dict, dict]:
         raise ValueError(f"Unknown stage: {stage}")
 
 
-@hydra.main(version_base=None, config_path="configs", config_name="main.yaml")
+@hydra.main(version_base="1.3", config_path=root / "configs", config_name="main.yaml")
 def lightning_main(cfg : DictConfig) -> None:
     main(cfg)
 
