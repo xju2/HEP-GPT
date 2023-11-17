@@ -1,7 +1,5 @@
 from typing import Any, Optional, Dict
 
-from lightning.pytorch.utilities.types import STEP_OUTPUT, OptimizerLRScheduler
-
 import torch
 from torchmetrics import MeanMetric, MinMetric
 
@@ -14,7 +12,6 @@ class NextModulePrediction(L.LightningModule):
 
     def __init__(self,
                  model: torch.nn.Module,
-                 loss_fn: torch.nn.Module,
                  optimizer: torch.optim.Optimizer,
                  scheduler: Optional[torch.optim.lr_scheduler._LRScheduler] = None,
                  metrics_fn: Optional[callable] = None,
@@ -22,11 +19,11 @@ class NextModulePrediction(L.LightningModule):
         super().__init__()
         self.save_hyperparameters(
             logger=False,
-            ignore=["model", "loss_fn", "optimizer", "scheduler", "metrics_fn"]
+            ignore=["model", "optimizer", "scheduler", "metrics_fn"]
         )
 
         self.model = model
-        self.loss_fn = loss_fn
+        self.loss_fn = torch.nn.CrossEntropyLoss()
         self.optimizer = optimizer
         self.scheduler = scheduler
         self.metrics_fn = metrics_fn
@@ -42,6 +39,7 @@ class NextModulePrediction(L.LightningModule):
         return self.model(x)
 
     def configure_optimizers(self):
+        # TODO: add weight decay for 2D parameters and not for bias and norm
         opt = self.optimizer(params=self.parameters())
         if self.scheduler is None:
             return opt

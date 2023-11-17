@@ -42,8 +42,8 @@ def main(cfg: DictConfig) -> Tuple[dict, dict]:
 
     stage = cfg.get("stage", "fit")
 
-    log.info(f"Instantiating datamodule <{cfg.data._target_}>")
-    datamodule: LightningDataModule = hydra.utils.instantiate(cfg.data)
+    log.info(f"Instantiating datamodule <{cfg.datamodule._target_}>")
+    datamodule: LightningDataModule = hydra.utils.instantiate(cfg.datamodule)
     datamodule.setup(stage)
 
     log.info(f"Instantiating model <{cfg.model._target_}>")

@@ -1,4 +1,4 @@
-_target_: pytorch_lightning.Trainer
+_target_: lightning.Trainer
 
 default_root_dir: ${paths.output_dir}
 
@@ -22,4 +22,4 @@ detect_anomaly: True
 
 ## Effective training techniques
 # gradient_clip_val: 0.5
-# gradient_clip_algorithm: norm 
+# gradient_clip_algorithm: norm

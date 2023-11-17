@@ -1,5 +1,5 @@
 csv:
-  _target_: lightning.fabric.loggers.CSVLogger
+  _target_: lightning.pytorch.loggers.csv_logs.CSVLogger
 
   root_dir: ${paths.output_dir}
   name: 'metrics'

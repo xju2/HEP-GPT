@@ -52,31 +52,39 @@ class PositionEncoding(nn.Module):
         x = x + self.pe[:x.size(1), :]
         return self.dropout(x)
 
-
-@dataclass
-class GPTConfig:
-    block_size: int = 1024
-    vocab_size: int = 50304
-    n_layer: int = 12
-    n_head: int = 12
-    n_embd: int = 768
-    dropout: float = 0.0
-    bias: bool = True
-    dim_feedforward: int = 2048
-    norm_first: bool = False
-    activation: str = "gelu"
-    padding_idx: int = None
-
 class GPT(nn.Module):
     """Adapt from https://pytorch.org/tutorials/beginner/transformer_tutorial.html"""
-    def __init__(self, config: GPTConfig):
+    def __init__(self,
+                 block_size: int,
+                 vocab_size: int,
+                 n_layer: int,
+                 n_head: int,
+                 n_embd: int,
+                 dropout: float,
+                 bias: bool,
+                 dim_feedforward: int,
+                 norm_first: bool,
+                 activation: str,
+                 padding_idx: int):
         super().__init__()
+
+        self.block_size = block_size
+        self.vocab_size = vocab_size
+        self.n_layer = n_layer
+        self.n_head = n_head
+        self.n_embd = n_embd
+        self.dropout = dropout
+        self.bias = bias
+        self.dim_feedforward = dim_feedforward
+        self.norm_first = norm_first
+        self.activation = activation
+        self.padding_idx = padding_idx
+
         self.model_type = "GPT"
-        self.config = config
 
         self.register_buffer(
             "src_mask",
-            nn.Transformer.generate_square_subsequent_mask(config.block_size)
+            nn.Transformer.generate_square_subsequent_mask(self.block_size)
         )
 
         # token embeddings, [B, T] -> [B, T, D]
@@ -84,29 +92,29 @@ class GPT(nn.Module):
         # T: block size
         # D: embedding dimension
         self.tok_emb = nn.Embedding(
-            config.vocab_size,
-            config.n_embd,
-            config.padding_idx)
+            self.vocab_size,
+            self.n_embd,
+            self.padding_idx)
 
         # positional embeddings, [B, T, D] -> [B, T, D]
-        self.pos_emb = PositionEncoding(config.n_embd, config.dropout, config.block_size)
+        self.pos_emb = PositionEncoding(self.n_embd, self.dropout, self.block_size)
 
-        self.drop = nn.Dropout(config.dropout)
+        self.drop = nn.Dropout(self.dropout)
 
         # transformer encoder
         encoder_layer = TransformerEncoderLayer(
-            config.n_embd,
-            config.n_head,
-            config.dim_feedforward,
-            config.dropout,
-            config.activation,
-            norm_first=config.norm_first,
+            self.n_embd,
+            self.n_head,
+            self.dim_feedforward,
+            self.dropout,
+            self.activation,
+            norm_first=self.norm_first,
             batch_first=True,
-            bias=config.bias,
+            bias=self.bias,
         )
-        self.encoder = TransformerEncoder(encoder_layer, num_layers=config.n_layer)
+        self.encoder = TransformerEncoder(encoder_layer, num_layers=self.n_layer)
 
-        self.decoder = nn.Linear(config.n_embd, config.vocab_size, bias=False)
+        self.decoder = nn.Linear(self.n_embd, self.vocab_size, bias=False)
 
         # with weight tying when using torch.compile() some warnings get generated:
         # "UserWarning: functional_call was passed multiple values for tied weights.
@@ -131,7 +139,7 @@ class GPT(nn.Module):
             idx: Tensor, shape ``[batch_size, seq_len]``
         """
         seq_len = idx.size(1)
-        idx = self.tok_emb(idx) * math.sqrt(self.config.n_embd)
+        idx = self.tok_emb(idx) * math.sqrt(self.self.n_embd)
         idx = self.pos_emb(idx)
 
         embedding = self.encoder(idx, mask=self.src_mask, is_causal=True)

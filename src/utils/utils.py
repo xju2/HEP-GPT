@@ -79,9 +79,6 @@ def close_loggers():
     """Makes sure all loggers closed properly (prevents logging failure during multirun)."""
 
     log.info("Closing loggers...")
-    for lg in Logger.loggers:
-        lg.close()
-
     if find_spec("wandb"):
         import wandb
         wandb.finish()
