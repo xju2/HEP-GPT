@@ -28,6 +28,9 @@ class NextModulePrediction(L.LightningModule):
         self.scheduler = scheduler
         self.metrics_fn = metrics_fn
 
+        # save evaluation outputs
+        self.validation_step_outputs = []
+
         # metrics to monitor
         self.train_loss = MeanMetric()
         self.val_loss = MeanMetric()
@@ -84,16 +87,18 @@ class NextModulePrediction(L.LightningModule):
     def validation_step(self, batch: Any, batch_idx: int):
         perf = self.step(batch, batch_idx)
         self.val_loss(perf["loss"])
+
+        self.validation_step_outputs.append(perf)
         return perf
 
-    def validation_epoch_end(self, validation_step_outputs):
+    def on_validation_epoch_end(self):
         avg_loss = self.val_loss.compute()
         self.min_val_loss(avg_loss)
         self.log("val_loss", avg_loss, prog_bar=True, logger=True, on_step=False, on_epoch=True)
         self.log("val_min_loss", self.min_val_loss.compute(), prog_bar=True)
 
         if avg_loss < self.min_val_loss.compute() and self.metrics_fn is not None:
-            for perf in validation_step_outputs:
+            for perf in self.validation_step_outputs:
                 self.metrics_fn(perf)
 
     def test_step(self, batch: Any, batch_idx: int):

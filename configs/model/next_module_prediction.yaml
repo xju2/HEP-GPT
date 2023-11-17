@@ -1,0 +1,31 @@
+_target_: src.models.next_module_prediction.NextModulePrediction
+
+model:
+  _target_: src.models.components.gpt.GPT
+  block_size: ${datamodule.block_size}
+  vocab_size: 50304
+  n_layer: 12
+  n_head: 12
+  n_embd: 768
+  dropout: 0.0
+  bias: True
+  dim_feedforward: 2048
+  norm_first: False
+  activation: "gelu"
+  padding_idx: null
+
+optimizer:
+  _target_: torch.optim.AdamW
+  _partial_: true
+  lr: 0.0001
+
+
+scheduler:
+  _target_: torch.optim.lr_scheduler.ReduceLROnPlateau
+  _partial_: true
+  mode: "min"
+  factor: 0.5
+  patience: 10
+  threshold: 0.0001
+  min_lr: 0
+  eps: 1e-08
