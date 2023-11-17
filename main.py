@@ -20,6 +20,7 @@ from lightning.pytorch import Trainer
 from lightning.pytorch.loggers.logger import Logger
 from lightning.pytorch.callbacks import Callback
 
+import torch
 
 from src.utils import utils
 
@@ -36,6 +37,7 @@ def main(cfg: DictConfig) -> Tuple[dict, dict]:
     Args:
         cfg (DictConfig): Configuration composed by Hydra.
     """
+    torch.set_float32_matmul_precision("medium")
 
     # set seed for random number generators in pytorch, numpy and python.random
     if cfg.get("seed"):

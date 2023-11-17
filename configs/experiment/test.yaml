@@ -9,4 +9,10 @@ tags: ["test", "dev"]
 
 callbacks:
   model_checkpoint:
-    monitor: "val/loss"
+    monitor: "val/avg_loss"
+
+trainer:
+  fast_dev_run: False
+  limit_train_batches: 3
+  limit_val_batches: 3
+  max_epochs: 3

@@ -48,7 +48,10 @@ def task_wrapper(task_func: Callable) -> Callable:
     def wrap(cfg: DictConfig):
         """Wrapper function."""
 
-        log.info(f"Output dir: {cfg.paths.output_dir}")
+        outdir = Path(cfg.paths.output_dir)
+        log.info(f"Output dir: {outdir}")
+        Path(outdir / "tensorboard").mkdir(parents=True, exist_ok=True)
+
         # execute the task
         try:
             start_time = time.time()

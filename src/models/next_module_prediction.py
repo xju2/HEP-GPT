@@ -25,9 +25,6 @@ class NextModulePrediction(L.LightningModule):
 
         self.model = model
 
-        self.example_input_array = torch.LongTensor([[2] * model.block_size,
-                                                     [4] * model.block_size])
-
         self.loss_fn = torch.nn.CrossEntropyLoss(
             ignore_index=-1,
             label_smoothing=label_smoothing)
@@ -45,6 +42,11 @@ class NextModulePrediction(L.LightningModule):
 
         # track best validation loss
         self.min_val_loss = MinMetric()
+
+    # @property
+    # def example_input_array(self):
+    #     return torch.LongTensor([[2] * self.model.block_size,
+    #                              [4] * self.model.block_size])
 
     def forward(self, x: torch.Tensor):
         return self.model(x)

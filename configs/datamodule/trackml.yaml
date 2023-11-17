@@ -6,5 +6,5 @@ test_data: ${paths.data_dir}/trackml/evt20_val.bin
 meta_data: ${paths.data_dir}/trackml/meta.pkl
 batch_size: 1024
 block_size: 22
-num_workers: 1  # number of workers for the data loader
+num_workers: 20    # number of workers for the data loader
 do_randomize: True # randomize the order of the blocks

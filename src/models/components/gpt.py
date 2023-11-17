@@ -52,8 +52,8 @@ class PositionEncoding(nn.Module):
         x = x + self.pe[:x.size(1), :]
         return self.dropout(x)
 
+
 class GPT(nn.Module):
-    """Adapt from https://pytorch.org/tutorials/beginner/transformer_tutorial.html"""
     def __init__(self,
                  block_size: int,
                  vocab_size: int,
@@ -138,7 +138,6 @@ class GPT(nn.Module):
         Arguments:
             idx: Tensor, shape ``[batch_size, seq_len]``
         """
-        seq_len = idx.size(1)
         idx = self.tok_emb(idx) * math.sqrt(self.n_embd)
         idx = self.pos_emb(idx)
 

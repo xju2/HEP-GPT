@@ -3,13 +3,13 @@ _target_: src.models.next_module_prediction.NextModulePrediction
 model:
   _target_: src.models.components.gpt.GPT
   block_size: ${datamodule.block_size}
-  vocab_size: 50304
+  vocab_size: 18737
   n_layer: 12
-  n_head: 12
-  n_embd: 768
+  n_head: 16
+  n_embd: 256
   dropout: 0.0
   bias: True
-  dim_feedforward: 2048
+  dim_feedforward: ${eval:${model.model.n_embd}*4}
   norm_first: False
   activation: "gelu"
   padding_idx: null
