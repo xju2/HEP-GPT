@@ -1,13 +1,13 @@
-from dataclasses import dataclass
-
 import torch
 from torch import Tensor
 import torch.nn as nn
-import torch.nn.functional as F
 
 import math
-from torch.nn import LayerNorm
 from torch.nn import TransformerEncoderLayer, TransformerEncoder
+
+from src.utils import utils
+
+log = utils.get_pylogger(__name__)
 
 class PositionEncoding(nn.Module):
     r"""Inject some information about the relative or absolute position of the tokens in the sequence.
@@ -124,7 +124,7 @@ class GPT(nn.Module):
             self.decoder.weight
         )  # https://paperswithcode.com/method/weight-tying
 
-        print("number of parameters: {:.2f}M".format(self.get_num_params() / 1e6))
+        log.info("number of parameters: {:.2f}M".format(self.get_num_params() / 1e6))
 
     def get_num_params(self):
         """
@@ -139,7 +139,7 @@ class GPT(nn.Module):
             idx: Tensor, shape ``[batch_size, seq_len]``
         """
         seq_len = idx.size(1)
-        idx = self.tok_emb(idx) * math.sqrt(self.self.n_embd)
+        idx = self.tok_emb(idx) * math.sqrt(self.n_embd)
         idx = self.pos_emb(idx)
 
         embedding = self.encoder(idx, mask=self.src_mask, is_causal=True)

@@ -68,7 +68,6 @@ class TrackMLDataModule(pl.LightningDataModule):
             'batch_size': batch_size,
             'num_workers': num_workers,
             'pin_memory': True,
-            'shuffle': True,
             'drop_last': True,
         }
         self.read_meta_data()
@@ -104,7 +103,7 @@ class TrackMLDataModule(pl.LightningDataModule):
             raise NotImplementedError("predict stage is not implemented yet.")
 
     def train_dataloader(self):
-        return DataLoader(self.train_dataset, **self.loader_kwargs)
+        return DataLoader(self.train_dataset, shuffle=True, **self.loader_kwargs)
 
     def val_dataloader(self):
         return DataLoader(self.val_dataset, **self.loader_kwargs)

@@ -14,8 +14,9 @@ OmegaConf.register_new_resolver("gen_list", lambda x, y: [x] * y)
 
 from typing import List, Tuple
 
+import lightning as L
 from lightning.pytorch.core import LightningDataModule, LightningModule
-from lightning.pytorch import Trainer, seed_everything
+from lightning.pytorch import Trainer
 from lightning.pytorch.loggers.logger import Logger
 from lightning.pytorch.callbacks import Callback
 
@@ -38,7 +39,7 @@ def main(cfg: DictConfig) -> Tuple[dict, dict]:
 
     # set seed for random number generators in pytorch, numpy and python.random
     if cfg.get("seed"):
-        seed_everything(cfg.seed, workers=True)
+        L.seed_everything(cfg.seed)
 
     stage = cfg.get("stage", "fit")
 
@@ -59,10 +60,12 @@ def main(cfg: DictConfig) -> Tuple[dict, dict]:
     trainer: Trainer = hydra.utils.instantiate(cfg.trainer, callbacks=callbacks, logger=logger)
 
     if stage == "fit":
-
         log.info("Starting training!")
-        trainer.fit(model=model, datamodule=datamodule, ckpt_path=cfg.get("ckpt_path"))
-
+        trainer.fit(model=model,
+                    train_dataloaders=datamodule.train_dataloader(),
+                    val_dataloaders=datamodule.val_dataloader(),
+                    ckpt_path=cfg.get("ckpt_path", None),
+                    )
     elif stage == "test":
         log.info("Starting testing!")
         ckpt_path = trainer.checkpoint_callback.best_model_path

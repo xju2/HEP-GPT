@@ -1,7 +1,7 @@
 hydra-core
 hydra-colorlog
 lightning
-torch --index-url https://download.pytorch.org/whl/cu118
+torch >= 2.1 --index-url https://download.pytorch.org/whl/cu118
 numpy
 transformers
 datasets
@@ -11,3 +11,5 @@ tqdm
 pyrootutils  # standardizing the project root setup
 flake8
 jupyterlab
+tensorboard
+wandb

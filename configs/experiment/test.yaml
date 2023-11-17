@@ -1,0 +1,12 @@
+# @package _global_
+
+defaults:
+  - override /trainer: gpu.yaml
+
+seed: 12345
+
+tags: ["test", "dev"]
+
+callbacks:
+  model_checkpoint:
+    monitor: "val/loss"

@@ -15,6 +15,7 @@ class NextModulePrediction(L.LightningModule):
                  optimizer: torch.optim.Optimizer,
                  scheduler: Optional[torch.optim.lr_scheduler._LRScheduler] = None,
                  metrics_fn: Optional[callable] = None,
+                 label_smoothing: float = 0.05
                  ):
         super().__init__()
         self.save_hyperparameters(
@@ -23,7 +24,14 @@ class NextModulePrediction(L.LightningModule):
         )
 
         self.model = model
-        self.loss_fn = torch.nn.CrossEntropyLoss()
+
+        self.example_input_array = torch.LongTensor([[2] * model.block_size,
+                                                     [4] * model.block_size])
+
+        self.loss_fn = torch.nn.CrossEntropyLoss(
+            ignore_index=-1,
+            label_smoothing=label_smoothing)
+
         self.optimizer = optimizer
         self.scheduler = scheduler
         self.metrics_fn = metrics_fn
@@ -52,7 +60,7 @@ class NextModulePrediction(L.LightningModule):
                 "optimizer": opt,
                 "lr_scheduler": {
                     "scheduler": sch,
-                    "monitor": "val_loss",
+                    "monitor": "train/loss",
                     "interval": "step",
                     "frequency": self.trainer.val_check_interval,
                     "strict": True,
@@ -66,14 +74,18 @@ class NextModulePrediction(L.LightningModule):
         self.min_val_loss.reset()
 
 
+    def cal_loss(self, logits: torch.Tensor, y: torch.Tensor):
+        return self.loss_fn(logits.view(-1, logits.size(-1)), y.view(-1))
+
     def training_step(self, batch: Any, batch_idx: int):
         x, y = batch
         logits = self(x)
-        loss = self.loss_fn(logits, y)
+
+        loss = self.cal_loss(logits, y)
 
         # update and log metrics
         self.train_loss(loss)
-        self.log("train_loss", loss, prog_bar=True, logger=True, on_step=True, on_epoch=False)
+        self.log("train/loss", loss, prog_bar=True, logger=True, on_step=True, on_epoch=False)
 
         return loss
 
@@ -81,12 +93,15 @@ class NextModulePrediction(L.LightningModule):
         """Common function for validation and test step"""
         x, y = batch
         logits = self(x)
-        loss = self.loss_fn(logits, y)
+        loss = self.cal_loss(logits, y)
         return {"loss": loss}
 
     def validation_step(self, batch: Any, batch_idx: int):
         perf = self.step(batch, batch_idx)
-        self.val_loss(perf["loss"])
+
+        loss = perf["loss"]
+        self.val_loss(loss)
+        self.log("val/loss", loss, prog_bar=True, logger=True, on_step=True, on_epoch=False)
 
         self.validation_step_outputs.append(perf)
         return perf
@@ -94,12 +109,20 @@ class NextModulePrediction(L.LightningModule):
     def on_validation_epoch_end(self):
         avg_loss = self.val_loss.compute()
         self.min_val_loss(avg_loss)
-        self.log("val_loss", avg_loss, prog_bar=True, logger=True, on_step=False, on_epoch=True)
-        self.log("val_min_loss", self.min_val_loss.compute(), prog_bar=True)
+        log_args = {
+            "prog_bar": True,
+            "logger": True,
+            "on_step": False,
+            "on_epoch": True
+        }
+        self.log("val/avg_loss", avg_loss, **log_args)
+        self.log("val/min_avg_loss", self.min_val_loss.compute(), **log_args)
 
         if avg_loss < self.min_val_loss.compute() and self.metrics_fn is not None:
             for perf in self.validation_step_outputs:
                 self.metrics_fn(perf)
+
+        self.validation_step_outputs.clear()
 
     def test_step(self, batch: Any, batch_idx: int):
         perf = self.step(batch, batch_idx)

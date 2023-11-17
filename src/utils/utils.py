@@ -48,6 +48,7 @@ def task_wrapper(task_func: Callable) -> Callable:
     def wrap(cfg: DictConfig):
         """Wrapper function."""
 
+        log.info(f"Output dir: {cfg.paths.output_dir}")
         # execute the task
         try:
             start_time = time.time()
@@ -58,7 +59,7 @@ def task_wrapper(task_func: Callable) -> Callable:
         finally:
             path = Path(cfg.paths.output_dir, "exec_time.log")
             content = (
-                f"'{cfg.task_name}' execution time: {time.time() - start_time} (s)"
+                f"'{cfg.task_name}' execution time: {time.time() - start_time:.3f} (s)"
             )
             save_file(
                 path, content
@@ -66,7 +67,6 @@ def task_wrapper(task_func: Callable) -> Callable:
             close_loggers()  # close loggers (even if exception occurs so multirun won't fail)
 
         log.info(f"Output dir: {cfg.paths.output_dir}")
-
     return wrap
 
 @rank_zero_only
