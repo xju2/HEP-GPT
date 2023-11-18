@@ -1,0 +1,14 @@
+"""List of reserved tokens for the datamodules."""
+# pylint: disable=invalid-name
+
+PAD_TOKEN = 0
+EVENT_START_TOKEN = 1
+EVENT_END_TOKEN = 2
+TRACK_START_TOKEN = 3
+TRACK_END_TOKEN = 4
+TRACK_HOLE_TOKEN = 5
+MASK_TOKEN = 6
+EVENT_MASK_TOKEN = 7
+EVENT_PAD_TOKEN = 8
+NUM_TOKEN = 9
+UNKNOWN_TOKEN = 10
