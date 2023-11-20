@@ -1,3 +1,11 @@
+import pyrootutils
+root = pyrootutils.setup_root(
+    search_from=__file__,
+    indicator=[".git", "pyproject.toml"],
+    pythonpath=True,
+    dotenv=True,
+)
+
 from src.datamodules.components.odd_reader import ActsReader
 
 
