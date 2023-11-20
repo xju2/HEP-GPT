@@ -13,13 +13,24 @@ from src.utils.pylogger import get_pylogger
 
 log = get_pylogger(__name__)
 
-class TrackMLDataSet(Dataset):
-    def __init__(self, inputfile: str,
+class SequenceData(Dataset):
+    """Sequence data set.
+    Arguments:
+        inputfile: input file, it contains npz object that is a list of tokens.
+        block_size: block size
+        do_randomize: do randomize
+        transform: transform
+        target_transform: target transform
+        name: name of the dataset
+        **kwargs: other arguments
+    """
+    def __init__(self,
+                 inputfile: str,
                  block_size: int,
                  do_randomize: bool = False,
                  transform=None,
                  target_transform=None,
-                 name="TrackDataSet",
+                 name="SequenceData",
                  **kwargs):
         self.inputfile = inputfile
         self.block_size = block_size
@@ -51,7 +62,7 @@ class TrackMLDataSet(Dataset):
         return x, y
 
 
-class TrackMLDataModule(pl.LightningDataModule):
+class SequenceDataModule(pl.LightningDataModule):
     def __init__(self,
                  train_data: str,
                  val_data: str,
@@ -84,21 +95,21 @@ class TrackMLDataModule(pl.LightningDataModule):
     def setup(self, stage: Optional[str] = None):
         # Assign train/val datasets for use in dataloaders
         if stage == 'fit' or stage is None:
-            self.train_dataset = TrackMLDataSet(self.hparams.train_data,
-                                                self.hparams.block_size,
-                                                self.hparams.do_randomize,
-                                                name="train")
-            self.val_dataset = TrackMLDataSet(self.hparams.val_data,
+            self.train_dataset = SequenceData(self.hparams.train_data,
                                               self.hparams.block_size,
                                               self.hparams.do_randomize,
-                                              name="val")
+                                              name="train")
+            self.val_dataset = SequenceData(self.hparams.val_data,
+                                            self.hparams.block_size,
+                                            self.hparams.do_randomize,
+                                            name="val")
 
         # Assign test dataset for use in dataloader(s)
         if stage == "test":
-            self.test_dataset = TrackMLDataSet(self.hparams.test_data,
-                                               self.hparams.block_size,
-                                               self.hparams.do_randomize,
-                                               name="test")
+            self.test_dataset = SequenceData(self.hparams.test_data,
+                                             self.hparams.block_size,
+                                             self.hparams.do_randomize,
+                                             name="test")
         if stage == "predict":
             raise NotImplementedError("predict stage is not implemented yet.")
 

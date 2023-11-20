@@ -1,4 +1,4 @@
-"""Read csv files obtained from ACTS
+"""Read csv files obtained from ACTS with the Open Data Detector.
 
 The files are CSV files organized as follows:
 acts/event000001000-hits.csv
@@ -12,43 +12,39 @@ acts/event000001000-cells.csv
 import os
 import re
 import glob
-from typing import Union, Optional
-from pathlib import Path
+import itertools
 
 import numpy as np
 import pandas as pd
 
-from src.datamodules import reserved_tokens as rt
+from src.utils.pylogger import get_pylogger
+from src.datamodules.components.event_reader_base import EventReaderBase
 
-class ActsReader(object):
+logger = get_pylogger(__name__)
+
+def make_true_edges(hits):
+    hit_list = hits.groupby(['particle_id', 'geometry_id'], sort=False)['index'] \
+        .agg(lambda x: list(x)).groupby(level=0) \
+        .agg(lambda x: list(x))
+
+    e = []
+    for row in hit_list.values:
+        for i, j in zip(row[0:-1], row[1:]):
+            e.extend(list(itertools.product(i, j)))
+
+    layerless_true_edges = np.array(e).T
+    return layerless_true_edges
+
+
+class ActsReader(EventReaderBase):
     def __init__(self,
-                 inputdir: Union[str, Path],
-                 output_dir: Optional[str] = None,
-                 overwrite: bool = True,
-                 num_workers: int = 1,
-                 min_truth_hits: int = 4,
-                 with_padding: bool = False,
-                 with_event_tokens: bool = False,
-                 with_event_padding: bool = False,
-                 with_seperate_event_pad_token: bool = False,
-                 name: str = "ActsReader",
-                 spname: str = 'spacepoint'):
+                 overwrite: bool = False,
+                 spname: str = "spacepoints",
+                 *arg, **kwargs):
         """Initialize the reader"""
-        self.input_dir = Path(inputdir) if isinstance(inputdir, str) else inputdir
-        if not self.input_dir.exists() or not self.input_dir.is_dir():
-            raise FileNotFoundError("Input directory not found: {}".format(inputdir))
-
-        self.outdir = Path(output_dir) if output_dir else self.input_dir / "processed_data"
-        self.outdir.mkdir(parents=True, exist_ok=True)
+        super().__init__(*arg, **kwargs)
 
         self.overwrite = overwrite
-        self.num_workers = num_workers
-        self.min_truth_hits = min_truth_hits
-        self.with_padding = with_padding
-        self.with_event_tokens = with_event_tokens
-        self.with_event_padding = with_event_padding
-        self.with_seperate_event_pad_token = with_seperate_event_pad_token
-        self.name = name
         self.spname = spname
 
         # count how many events in the directory
@@ -64,11 +60,11 @@ class ActsReader(object):
             self.nevts, self.basedir))
 
 
-    def read_event(self, evt_idx: int = None) -> bool:
+    def read_event(self, evt_idx: int = None) -> pd.DataFrame:
         """Read one event from the input directory through the event index
 
         Return:
-            MeasurementData
+            hits: pd.DataFrame, hits information
         """
         if (evtid is None or evtid < 1) and self.nevts > 0:
             evtid = self.all_evtids[0]
@@ -76,6 +72,7 @@ class ActsReader(object):
         else:
             evtid = self.all_evtids[evt_idx]
 
+        # construct file names for each csv file for this event
         prefix = os.path.join(self.basedir, "event{:09d}".format(evtid))
         hit_fname = "{}-hits.csv".format(prefix)
         measurements_fname = "{}-measurements.csv".format(prefix)
@@ -100,28 +97,28 @@ class ActsReader(object):
         theta = np.arccos(particles.pz / momentum)
         eta = -np.log(np.tan(0.5 * theta))
         radius = np.sqrt(particles.vx**2 + particles.vy**2)
-        particles = particles.assign(pt=pt, radius=radius, eta=eta)
+        particles = particles.assign(p_pt=pt, p_radius=radius, p_eta=eta)
 
         # read cluster information
         cell_fname = '{}-cells.csv'.format(prefix)
         cells = pd.read_csv(cell_fname)
-
-        # calculate cluster shape information
-        direction_count_u = cells.groupby(['hit_id']).channel0.agg(['min', 'max'])
-        direction_count_v = cells.groupby(['hit_id']).channel1.agg(['min', 'max'])
-        nb_u = direction_count_u['max'] - direction_count_u['min'] + 1
-        nb_v = direction_count_v['max'] - direction_count_v['min'] + 1
-        hit_cells = cells.groupby(['hit_id']).value.count().values
-        hit_value = cells.groupby(['hit_id']).value.sum().values
-        # as I don't access to the rotation matrix and the pixel pitches,
-        # I can't calculate cluster's local/global position
-        sp = sp.assign(len_u=nb_u, len_v=nb_v, cell_count=hit_cells, cell_val=hit_value)
+        if cells.shape[0] > 0:
+            # calculate cluster shape information
+            direction_count_u = cells.groupby(['hit_id']).channel0.agg(['min', 'max'])
+            direction_count_v = cells.groupby(['hit_id']).channel1.agg(['min', 'max'])
+            nb_u = direction_count_u['max'] - direction_count_u['min'] + 1
+            nb_v = direction_count_v['max'] - direction_count_v['min'] + 1
+            hit_cells = cells.groupby(['hit_id']).value.count().values
+            hit_value = cells.groupby(['hit_id']).value.sum().values
+            # as I don't access to the rotation matrix and the pixel pitches,
+            # I can't calculate cluster's local/global position
+            sp = sp.assign(len_u=nb_u, len_v=nb_v, cell_count=hit_cells, cell_val=hit_value)
 
 
         sp_hits = sp.merge(meas2hits, on='measurement_id', how='left').merge(
             hits, on='hit_id', how='left')
         sp_hits = sp_hits.merge(
-            particles[['particle_id', 'vx', 'vy', 'vz']], on='particle_id', how='left')
+            particles[['particle_id', 'vx', 'vy', 'vz', 'p_pt', 'p_eta']], on='particle_id', how='left')
 
         r = np.sqrt(sp_hits.x**2 + sp_hits.y**2)
         phi = np.arctan2(sp_hits.y, sp_hits.x)
@@ -140,4 +137,4 @@ class ActsReader(object):
         self.spacepoints = sp_hits
         self.true_edges = edges
 
-        return True
+        return sp_hits
