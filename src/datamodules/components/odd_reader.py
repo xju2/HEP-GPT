@@ -59,6 +59,26 @@ class ActsReader(EventReaderBase):
         print("total {} events in directory: {}".format(
             self.nevts, self.basedir))
 
+        detector_path = os.path.join(self.inputdir, "../detector.csv")
+        # load detector info
+        detector = pd.read_csv(detector_path)
+        self.detector = detector
+        self.build_detector_vocabulary(detector)
+
+    def build_detector_vocabulary(self, detector: pd.DataFrame):
+        """Build the detector vocabulary for the reader"""
+        assert "geometry_id" in detector.columns, "geometry_id not in detector.csv"
+
+        detector_umid = detector.geometry_id.unique()
+        umid_dict = {}
+        index = 1
+        for i in detector_umid:
+            umid_dict[i] = index
+            index += 1
+        self.umid_dict = umid_dict
+        self.num_modules = len(detector_umid)
+        # Inverting the umid_dict
+        self.umid_dict_inv = {v: k for k, v in umid_dict.items()}
 
     def read_event(self, evt_idx: int = None) -> pd.DataFrame:
         """Read one event from the input directory through the event index
@@ -89,6 +109,11 @@ class ActsReader(EventReaderBase):
         measurements = pd.read_csv(measurements_fname)
         meas2hits = pd.read_csv(measurements2hits_fname)
         sp = pd.read_csv(sp_fname)
+
+        # add geometry_id to space points
+        vlid_groups = sp.groupby(["geometry_id"])
+        sp = pd.concat([vlid_groups.get_group(x).assign(umid=self.umid_dict[x])
+                        for x in vlid_groups.groups.keys()])
 
         # read particles and add more variables for performance evaluation
         particles = pd.read_csv(p_name)
