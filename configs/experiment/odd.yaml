@@ -1,0 +1,33 @@
+# @package _global_
+
+defaults:
+  - override /trainer: gpu.yaml
+  - override /datamodule: odd_small.yaml
+  - override /logger: wandb.yaml
+
+seed: 123456
+
+tags: ["odd", "v1"]
+compile: True
+task_name: "odd"
+
+wandb:
+  tags: ["odd", "v1"]
+
+datamodule:
+  train_data: ${paths.data_dir}/odd_fixed_length/v1_evt100_train.bin
+  val_data: ${paths.data_dir}/odd_fixed_length/v0_evt10_val.bin
+  batch_size: 1024
+  num_workers: 20
+  do_randomize: False
+
+callbacks:
+  model_checkpoint:
+    monitor: "val/avg_loss"
+
+trainer:
+  fast_dev_run: False
+
+model:
+  model:
+    vocab_size: 18929

@@ -7,6 +7,7 @@ defaults:
 seed: 12345
 
 tags: ["test", "dev"]
+task_name: "test_odd"
 
 callbacks:
   model_checkpoint:

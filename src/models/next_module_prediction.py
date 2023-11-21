@@ -6,9 +6,9 @@ from torchmetrics import MeanMetric, MinMetric
 
 import lightning as L
 
-from src.utils.pylogger import get_logger
+from src.utils.pylogger import get_pylogger
 
-log = get_logger(__name__)
+log = get_pylogger(__name__)
 
 class NextModulePrediction(L.LightningModule):
     """Next Module Prediction Model

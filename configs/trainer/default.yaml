@@ -30,4 +30,6 @@ detect_anomaly: True
 
 ## Effective training techniques
 gradient_clip_val: 1.0
-gradient_clip_algorithm: norm
+gradient_clip_algorithm: norm   # or "value"
+accumulate_grad_batches: 1
+

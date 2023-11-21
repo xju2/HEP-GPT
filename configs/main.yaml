@@ -26,6 +26,9 @@ tags: ["trackml", "next_module_prediction"]
 # set False to skip model training
 stage: "fit"   # fit, test, predict
 
+# compile model
+compile: False
+
 # simply provide checkpoint path to resume training
 ckpt_path: null
 

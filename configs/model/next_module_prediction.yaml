@@ -1,7 +1,9 @@
 _target_: src.models.next_module_prediction.NextModulePrediction
+weight_decay: 0.01
+label_smoothing: 0.05
 
 model:
-  _target_: src.models.components.gpt.GPT
+  _target_: src.models.components.gpt.nanoGPT
   block_size: ${datamodule.block_size}
   vocab_size: 18737
   n_layer: 12

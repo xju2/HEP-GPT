@@ -38,7 +38,6 @@ def main(cfg: DictConfig) -> Tuple[dict, dict]:
         cfg (DictConfig): Configuration composed by Hydra.
     """
     torch.set_float32_matmul_precision("medium")
-    torch.autograd.set_detect_anomaly(True)
 
     # set seed for random number generators in pytorch, numpy and python.random
     if cfg.get("seed"):
@@ -52,6 +51,10 @@ def main(cfg: DictConfig) -> Tuple[dict, dict]:
 
     log.info(f"Instantiating model <{cfg.model._target_}>")
     model: LightningModule = hydra.utils.instantiate(cfg.model)
+    if cfg.compile:
+        log.info("Compiling model... (takes a ~minute)")
+        unoptimized_model = model
+        model = torch.compile(model)
 
     log.info("Instantiating callbacks...")
     callbacks: List[Callback] = utils.instantiate_callbacks(cfg.get("callbacks"))
