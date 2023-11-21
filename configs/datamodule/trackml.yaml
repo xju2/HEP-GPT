@@ -1,4 +1,4 @@
-_target_: src.datamodules.TrackMLDataModule
+_target_: src.datamodules.SequenceDataModule
 
 train_data: ${paths.data_dir}/trackml/evt20_train.bin
 val_data: ${paths.data_dir}/trackml/evt20_val.bin

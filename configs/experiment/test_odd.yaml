@@ -1,0 +1,19 @@
+# @package _global_
+
+defaults:
+  - override /trainer: gpu.yaml
+  - override /datamodule: odd_small.yaml
+
+seed: 12345
+
+tags: ["test", "dev"]
+
+callbacks:
+  model_checkpoint:
+    monitor: "val/avg_loss"
+
+trainer:
+  fast_dev_run: False
+  limit_train_batches: 3
+  limit_val_batches: 3
+  max_epochs: 3

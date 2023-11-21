@@ -1,0 +1,10 @@
+_target_: src.datamodules.SequenceDataModule
+
+train_data: ${paths.data_dir}/odd_fixed_length/v1_evt10_train.bin
+val_data: ${paths.data_dir}/odd_fixed_length/v1_evt10_val.bin
+test_data: ${paths.data_dir}/odd_fixed_length/v1_evt10_val.bin
+meta_data: ${paths.data_dir}/odd_fixed_length/meta.pkl
+batch_size: 1024
+block_size: 22
+num_workers: 20    # number of workers for the data loader
+do_randomize: True # randomize the order of the blocks

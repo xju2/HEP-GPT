@@ -75,6 +75,7 @@ class SequenceDataModule(pl.LightningDataModule):
                  ):
         super().__init__()
         self.save_hyperparameters(logger=False)
+
         self.loader_kwargs = {
             'batch_size': batch_size,
             'num_workers': num_workers,
