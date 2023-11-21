@@ -89,7 +89,7 @@ class ActsReader(EventReaderBase):
         Return:
             hits: pd.DataFrame, hits information
         """
-        if (evt_idx is None or evt_idx < 1) and self.nevts > 0:
+        if (evt_idx is None or evt_idx < 0) and self.nevts > 0:
             evtid = self.all_evtids[0]
             print(f"read event {evtid}.")
         else:
