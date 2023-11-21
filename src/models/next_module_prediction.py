@@ -1,9 +1,14 @@
 from typing import Any, Optional, Dict
+import inspect
 
 import torch
 from torchmetrics import MeanMetric, MinMetric
 
 import lightning as L
+
+from src.utils.pylogger import get_logger
+
+log = get_logger(__name__)
 
 class NextModulePrediction(L.LightningModule):
     """Next Module Prediction Model
@@ -15,7 +20,8 @@ class NextModulePrediction(L.LightningModule):
                  optimizer: torch.optim.Optimizer,
                  scheduler: Optional[torch.optim.lr_scheduler._LRScheduler] = None,
                  metrics_fn: Optional[callable] = None,
-                 label_smoothing: float = 0.05
+                 label_smoothing: float = 0.05,
+                 weight_decay: float = 0.01,
                  ):
         super().__init__()
         self.save_hyperparameters(
@@ -52,8 +58,37 @@ class NextModulePrediction(L.LightningModule):
         return self.model(x)
 
     def configure_optimizers(self):
-        # TODO: add weight decay for 2D parameters and not for bias and norm
-        opt = self.optimizer(params=self.parameters())
+        weight_decay = self.hparams.weight_decay
+
+        # start with all of the candidate parameters
+        param_dict = {pn: p for pn, p in self.named_parameters()}
+        # filter out those that do not require grad
+        param_dict = {pn: p for pn, p in param_dict.items() if p.requires_grad}
+        # create optim groups. Any parameters that is 2D will be weight decayed, otherwise no.
+        # i.e. all weight tensors in matmuls + embeddings decay, all biases and layernorms don't.
+        decay_params = [p for n, p in param_dict.items() if p.dim() >= 2]
+        nodecay_params = [p for n, p in param_dict.items() if p.dim() < 2]
+        optim_groups = [
+            {"params": decay_params, "weight_decay": weight_decay},
+            {"params": nodecay_params, "weight_decay": 0.0},
+        ]
+        num_decay_params = sum(p.numel() for p in decay_params)
+        num_nodecay_params = sum(p.numel() for p in nodecay_params)
+        log.info(
+            f"num decayed parameter tensors: {len(decay_params)}, with {num_decay_params:,} parameters"
+        )
+        log.info(
+            f"num non-decayed parameter tensors: {len(nodecay_params)}, with {num_nodecay_params:,} parameters"
+        )
+
+        # Create AdamW optimizer and use the fused version if it is available
+        fused_available = "fused" in inspect.signature(torch.optim.AdamW).parameters
+        use_fused = fused_available and torch.cuda.is_available()
+        extra_args = dict(fused=True) if use_fused else dict()
+        log.info(f"using fused AdamW: {use_fused}")
+
+        opt = self.optimizer(params=optim_groups, **extra_args)
+
         if self.scheduler is None:
             return opt
         else:
