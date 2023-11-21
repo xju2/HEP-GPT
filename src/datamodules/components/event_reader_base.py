@@ -39,11 +39,9 @@ def convert_hits_to_tokens(hits: pd.DataFrame,
                            ):
     """Convert hits to track tokens"""
     assert isinstance(hits, pd.DataFrame)
-    needed_columns = ["nhits", "particle_id", "umid", ]
-    contains_all_columns = all(
-        col in hits.columns for col in ["nhits", "particle_id", "volume_id", "layer_id", "module_id", "x", "y", "z"])
-    assert contains_all_columns, "hits must contain all columns: {}".format(
-        ["nhits", "particle_id", "volume_id", "layer_id", "module_id", "x", "y", "z"])
+    needed_columns = ["nhits", "particle_id", "umid"]
+    contains_all_columns = all(col in hits.columns for col in needed_columns)
+    assert contains_all_columns, "hits must contain all columns: {}".format(needed_columns)
 
     hits = hits[hits.nhits >= min_truth_hits]
 
@@ -71,8 +69,8 @@ def convert_hits_to_tokens(hits: pd.DataFrame,
 
 class EventReaderBase(object):
     def __init__(self,
-                 inputdir: Union[str, Path],
-                 output_dir: Optional[str] = None,
+                 inputdir: Union[str, Path] = Path.cwd(),
+                 outputdir: Optional[str] = None,
                  outname_prefix: str = "",
                  num_workers: int = 1,
                  min_truth_hits: int = 4,
@@ -84,12 +82,14 @@ class EventReaderBase(object):
                  *arg, **kwargs
                  ):
         """Initialize the reader"""
-        self.input_dir = Path(inputdir) if isinstance(inputdir, str) else inputdir
-        if not self.input_dir.exists() or not self.input_dir.is_dir():
+        self.inputdir = Path(inputdir) if isinstance(inputdir, str) else inputdir
+        if not self.inputdir.exists() or not self.inputdir.is_dir():
             raise FileNotFoundError("Input directory not found: {}".format(inputdir))
+        else:
+            logger.info("input directory: {}".format(self.inputdir))
 
-        self.outdir = Path(output_dir) if output_dir else self.input_dir / "processed_data"
-        self.outdir.mkdir(parents=True, exist_ok=True)
+        self.outputdir = Path(outputdir) if outputdir else self.inputdir / "processed_data"
+        self.outputdir.mkdir(parents=True, exist_ok=True)
 
         self.outname_prefix = outname_prefix + "_" if outname_prefix else ""
 
@@ -113,7 +113,7 @@ class EventReaderBase(object):
         """
         raise NotImplementedError
 
-    def convert_one_evt(self, idx: int):
+    def convert_one_event(self, idx: int):
         hits = self.read_event(idx)
 
         tracks = convert_hits_to_tokens(
@@ -128,11 +128,11 @@ class EventReaderBase(object):
                 start_evt, end_evt))
             return None
 
-        if self.config.num_workers > 1:
-            print("using {} workers to process the data".format(self.config.num_workers))
+        if self.num_workers > 1:
+            print("using {} workers to process the data".format(self.num_workers))
 
             # use the concurrent futures to speed up the processing
-            with concurrent.futures.ProcessPoolExecutor(max_workers=self.config.num_workers) as executor:
+            with concurrent.futures.ProcessPoolExecutor(max_workers=self.num_workers) as executor:
                 all_tracks = executor.map(self.convert_one_event, range(start_evt, end_evt))
         else:
             all_tracks = [self.convert_one_event(idx) for idx in range(start_evt, end_evt)]

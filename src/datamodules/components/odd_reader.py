@@ -39,7 +39,7 @@ def make_true_edges(hits):
 class ActsReader(EventReaderBase):
     def __init__(self,
                  overwrite: bool = False,
-                 spname: str = "spacepoints",
+                 spname: str = "spacepoint",
                  *arg, **kwargs):
         """Initialize the reader"""
         super().__init__(*arg, **kwargs)
@@ -49,7 +49,7 @@ class ActsReader(EventReaderBase):
 
         # count how many events in the directory
         all_evts = glob.glob(os.path.join(
-            self.basedir, "event*-{}.csv".format(spname)))
+            self.inputdir, "event*-{}.csv".format(spname)))
 
         pattern = "event([0-9]*)-{}.csv".format(spname)
         self.all_evtids = sorted([
@@ -57,7 +57,10 @@ class ActsReader(EventReaderBase):
             for x in all_evts])
         self.nevts = len(self.all_evtids)
         print("total {} events in directory: {}".format(
-            self.nevts, self.basedir))
+            self.nevts, self.inputdir))
+
+        if self.nevts == 0:
+            raise ValueError("No events found in {}".format(self.inputdir))
 
         detector_path = os.path.join(self.inputdir, "../detector.csv")
         # load detector info
@@ -86,14 +89,14 @@ class ActsReader(EventReaderBase):
         Return:
             hits: pd.DataFrame, hits information
         """
-        if (evtid is None or evtid < 1) and self.nevts > 0:
+        if (evt_idx is None or evt_idx < 1) and self.nevts > 0:
             evtid = self.all_evtids[0]
             print(f"read event {evtid}.")
         else:
             evtid = self.all_evtids[evt_idx]
 
         # construct file names for each csv file for this event
-        prefix = os.path.join(self.basedir, "event{:09d}".format(evtid))
+        prefix = os.path.join(self.inputdir, "event{:09d}".format(evtid))
         hit_fname = "{}-hits.csv".format(prefix)
         measurements_fname = "{}-measurements.csv".format(prefix)
         measurements2hits_fname = "{}-measurement-simhit-map.csv".format(prefix)
@@ -114,6 +117,7 @@ class ActsReader(EventReaderBase):
         vlid_groups = sp.groupby(["geometry_id"])
         sp = pd.concat([vlid_groups.get_group(x).assign(umid=self.umid_dict[x])
                         for x in vlid_groups.groups.keys()])
+        logger.info(sp.columns)
 
         # read particles and add more variables for performance evaluation
         particles = pd.read_csv(p_name)
@@ -141,9 +145,11 @@ class ActsReader(EventReaderBase):
 
 
         sp_hits = sp.merge(meas2hits, on='measurement_id', how='left').merge(
-            hits, on='hit_id', how='left')
+            hits[["hit_id", "particle_id"]], on='hit_id', how='left')
         sp_hits = sp_hits.merge(
             particles[['particle_id', 'vx', 'vy', 'vz', 'p_pt', 'p_eta']], on='particle_id', how='left')
+        num_hits = sp_hits.groupby(['particle_id']).hit_id.count()
+        sp_hits = sp_hits.merge(num_hits.to_frame(name='nhits'), on='particle_id', how='left')
 
         r = np.sqrt(sp_hits.x**2 + sp_hits.y**2)
         phi = np.arctan2(sp_hits.y, sp_hits.x)
