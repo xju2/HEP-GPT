@@ -35,8 +35,12 @@ class PositionEncoding(nn.Module):
         div_term = torch.exp(torch.arange(0, d_model, 2).float() * (-math.log(10000.0) / d_model))
         pe[:, 0::2] = torch.sin(position * div_term)
         pe[:, 1::2] = torch.cos(position * div_term)
-        # pe = pe.unsqueeze(0).transpose(0, 1)
-        self.register_buffer('pe', pe)
+        pe = pe.unsqueeze(0)   # [1, max_len, d_model]
+
+        # register_buffer => Tensor which is not a parameter, but should be part of the modules state.
+        # Used for tensors that need to be on the same device as the module.
+        # persistent=False tells PyTorch to not add the buffer to the state dict (e.g. when we save the model)
+        self.register_buffer('pe', pe, persistent=False)
 
     def forward(self, x):
         r"""Inputs of forward function
@@ -49,7 +53,7 @@ class PositionEncoding(nn.Module):
             >>> output = pos_encoder(x)
         """
 
-        x = x + self.pe[:x.size(1), :]
+        x = x + self.pe[:, :x.size(1), :]
         return self.dropout(x)
 
 
@@ -97,7 +101,7 @@ class GPT(nn.Module):
             self.padding_idx)
 
         # positional embeddings, [B, T, D] -> [B, T, D]
-        self.pos_emb = PositionEncoding(self.n_embd, self.dropout, self.block_size)
+        self.pos_emb = PositionEncoding(self.n_embd, self.dropout)
 
         self.drop = nn.Dropout(self.dropout)
 

@@ -38,6 +38,7 @@ def main(cfg: DictConfig) -> Tuple[dict, dict]:
         cfg (DictConfig): Configuration composed by Hydra.
     """
     torch.set_float32_matmul_precision("medium")
+    torch.autograd.set_detect_anomaly(True)
 
     # set seed for random number generators in pytorch, numpy and python.random
     if cfg.get("seed"):

@@ -9,7 +9,7 @@ model:
   n_embd: 256
   dropout: 0.0
   bias: True
-  dim_feedforward: ${eval:${model.model.n_embd}*4}
+  dim_feedforward: ${eval:${model.model.n_embd}*8}
   norm_first: False
   activation: "gelu"
   padding_idx: null

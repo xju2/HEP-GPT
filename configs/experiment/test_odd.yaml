@@ -17,3 +17,7 @@ trainer:
   limit_train_batches: 3
   limit_val_batches: 3
   max_epochs: 3
+
+model:
+  model:
+    vocab_size: 18929
