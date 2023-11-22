@@ -2,7 +2,7 @@ from typing import Any, Optional, Dict
 import inspect
 
 import torch
-from torchmetrics import MeanMetric, MinMetric
+from torchmetrics import MinMetric
 
 import lightning as L
 
@@ -22,6 +22,7 @@ class NextModulePrediction(L.LightningModule):
                  metrics_fn: Optional[callable] = None,
                  label_smoothing: float = 0.05,
                  weight_decay: float = 0.01,
+                 compile: bool = True
                  ):
         super().__init__()
         self.save_hyperparameters(
@@ -29,7 +30,11 @@ class NextModulePrediction(L.LightningModule):
             ignore=["model", "optimizer", "scheduler", "metrics_fn"]
         )
 
-        self.model = model
+        if compile:
+            log.info("Compiling model...")
+            self.model = torch.compile(model)
+        else:
+            self.model = model
 
         self.loss_fn = torch.nn.CrossEntropyLoss(
             ignore_index=-1,
@@ -40,14 +45,9 @@ class NextModulePrediction(L.LightningModule):
         self.metrics_fn = metrics_fn
 
         # save evaluation outputs
+        self.training_step_outputs = []
         self.validation_step_outputs = []
-
-        # metrics to monitor
-        self.train_loss = MeanMetric()
-        self.val_loss = MeanMetric()
-
-        # track best validation loss
-        self.min_val_loss = MinMetric()
+        self.val_min_avg_loss = MinMetric()
 
     # @property
     # def example_input_array(self):
@@ -105,26 +105,28 @@ class NextModulePrediction(L.LightningModule):
                 }
             }
 
-    def on_train_start(self):
-        self.train_loss.reset()
-        self.val_loss.reset()
-        self.min_val_loss.reset()
-
-
     def cal_loss(self, logits: torch.Tensor, y: torch.Tensor):
         return self.loss_fn(logits.view(-1, logits.size(-1)), y.view(-1))
+
+    def on_train_start(self) -> None:
+        self.val_min_avg_loss.reset()
 
     def training_step(self, batch: Any, batch_idx: int):
         x, y = batch
         logits = self(x)
-
         loss = self.cal_loss(logits, y)
 
-        # update and log metrics
-        self.train_loss(loss)
-        self.log("train/loss", loss, prog_bar=True, logger=True, on_step=True, on_epoch=False)
+        perf = {"loss": loss}
+        self.training_step_outputs.append(perf)
+        self.log("train/loss", loss, prog_bar=True, on_step=True, on_epoch=True, logger=True)
+        return perf
 
-        return loss
+    # def on_training_epoch_end(self) -> None:
+    #     mean_loss = torch.stack([x["loss"] for x in self.training_step_outputs]).mean()
+
+    #     # log metrics
+    #     self.log("train/avg_loss", mean_loss, prog_bar=True)
+    #     self.training_step_outputs.clear()
 
     def step(self, batch: Any, batch_idx: int) -> Dict[str, Any]:
         """Common function for validation and test step"""
@@ -135,32 +137,15 @@ class NextModulePrediction(L.LightningModule):
 
     def validation_step(self, batch: Any, batch_idx: int):
         perf = self.step(batch, batch_idx)
-
-        loss = perf["loss"]
-        self.val_loss(loss)
-        self.log("val/loss", loss, prog_bar=True, logger=True, on_step=True, on_epoch=False)
-
         self.validation_step_outputs.append(perf)
-        return perf
 
-    def on_validation_epoch_end(self):
-        avg_loss = self.val_loss.compute()
-        self.min_val_loss(avg_loss)
-        log_args = {
-            "prog_bar": True,
-            "logger": True,
-            "on_step": False,
-            "on_epoch": True
-        }
-        self.log("val/avg_loss", avg_loss, **log_args)
-        self.log("val/min_avg_loss", self.min_val_loss.compute(), **log_args)
+    def on_validation_epoch_end(self) -> None:
+        mean_loss = torch.stack([x["loss"] for x in self.validation_step_outputs]).mean()
+        self.val_min_avg_loss(mean_loss)
 
-        if avg_loss < self.min_val_loss.compute() and self.metrics_fn is not None:
-            for perf in self.validation_step_outputs:
-                self.metrics_fn(perf)
+        # log metrics
+        self.log("val/avg_loss", mean_loss, on_step=False, on_epoch=True, prog_bar=True)
+        self.log("val/min_avg_loss", self.val_min_avg_loss.compute(), prog_bar=True)
 
+        # reset the outputs
         self.validation_step_outputs.clear()
-
-    def test_step(self, batch: Any, batch_idx: int):
-        perf = self.step(batch, batch_idx)
-        return perf

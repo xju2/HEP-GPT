@@ -51,10 +51,6 @@ def main(cfg: DictConfig) -> Tuple[dict, dict]:
 
     log.info(f"Instantiating model <{cfg.model._target_}>")
     model: LightningModule = hydra.utils.instantiate(cfg.model)
-    if cfg.compile:
-        log.info("Compiling model... (takes a ~minute)")
-        unoptimized_model = model
-        model = torch.compile(model)
 
     log.info("Instantiating callbacks...")
     callbacks: List[Callback] = utils.instantiate_callbacks(cfg.get("callbacks"))
