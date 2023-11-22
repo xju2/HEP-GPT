@@ -15,7 +15,6 @@
 #SBATCH -N 1
 #SBATCH -J odd_v1
 
-
 mkdir -p logs
 
 # other GPU version: gpu&hbm80g
@@ -48,12 +47,9 @@ export PYTHONFAULTHANDLER=1
 
 function train_v1() {
   python main.py experiment=odd \
-        model.model.n_embd=1024 \
-        model.model.n_layer=24 \
-        datamodule.block_size=22 \
-        datamodule.batch_size=1024 \
-        trainer.max_epochs=100 \
-        +trainer.limit_val_batches=5
+        model.model.n_embd=1024 model.model.n_layer=24 \
+        datamodule.block_size=22 datamodule.batch_size=1024 datamodule.num_workers=31 \
+        trainer.max_epochs=100 +trainer.limit_val_batches=5
 }
 
 train_v1
