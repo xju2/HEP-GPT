@@ -13,3 +13,5 @@ flake8
 jupyterlab
 tensorboard
 wandb
+ruff
+pre-commit

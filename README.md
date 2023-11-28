@@ -9,6 +9,7 @@ pip install -r requirements.txt
 
 ## Usage
 
+* Start the environment: `source $SCRATCH/venv/llm/bin/activate`
 ```bash
 python data/trackml/reader.py /global/cfs/cdirs/m3443/data/trackml-codalab/train_all data/trackml/ -w 10
 ```
