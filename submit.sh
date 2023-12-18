@@ -46,10 +46,10 @@ export PYTHONFAULTHANDLER=1
 # the above command was for Track ML dataset. And they are no longer used.
 
 function train_v1() {
-  python main.py experiment=odd \
+  srun python main.py experiment=odd \
         model.model.n_embd=1024 model.model.n_layer=24 \
-        datamodule.block_size=22 datamodule.batch_size=1024 datamodule.num_workers=31 \
-        trainer.max_epochs=100 +trainer.limit_val_batches=5
+        datamodule.block_size=22 datamodule.batch_size=1024 datamodule.num_workers=0 \
+        trainer.max_epochs=100 +trainer.limit_val_batches=10
 }
 
 train_v1
