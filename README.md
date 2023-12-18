@@ -24,14 +24,3 @@ python data/trackml/reader.py /global/cfs/cdirs/m3443/data/trackml-codalab/train
 ```bash
 python main.py experiment=test_trackml
 ```
-
-### Obselete training script
-
-```bash
-python scripts/train.py -h
-```
-
-Train the model for fixed length sequences
-```bash
-python scripts/train.py max_epochs=10000 compile=True data.train_data=data/trackml_fixed_length/v1_evt10_train.bin data.val_data=data/trackml_fixed_length/v1_evt10_val.bin training.batch_size=1024 model.n_embd=1024
-```
