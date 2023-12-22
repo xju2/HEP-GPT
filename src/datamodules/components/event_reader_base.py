@@ -114,7 +114,7 @@ class EventReaderBase(object):
         raise NotImplementedError
 
     def convert_one_event(self, idx: int):
-        hits = self.read_event(idx)
+        hits = self.read_event(idx)[0]
 
         tracks = convert_hits_to_tokens(
             hits, self.min_truth_hits, self.with_padding,

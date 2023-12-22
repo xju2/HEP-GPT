@@ -13,6 +13,7 @@ import os
 import re
 import glob
 import itertools
+from typing import Tuple
 
 import numpy as np
 import pandas as pd
@@ -83,7 +84,7 @@ class ActsReader(EventReaderBase):
         # Inverting the umid_dict
         self.umid_dict_inv = {v: k for k, v in umid_dict.items()}
 
-    def read_event(self, evt_idx: int = None) -> pd.DataFrame:
+    def read_event(self, evt_idx: int = None) -> Tuple[pd.DataFrame, pd.DataFrame, np.ndarray]:
         """Read one event from the input directory through the event index
 
         Return:
@@ -162,10 +163,11 @@ class ActsReader(EventReaderBase):
         sp_hits = sp_hits.sort_values('R').reset_index(
             drop=True).reset_index(drop=False)
 
-        edges = make_true_edges(sp_hits)
+        true_edges = make_true_edges(sp_hits)
         self.particles = particles
         self.clusters = measurements
         self.spacepoints = sp_hits
-        self.true_edges = edges
+        self.true_edges = true_edges
+        self.evtid = evtid
 
-        return sp_hits
+        return sp_hits, particles, true_edges
