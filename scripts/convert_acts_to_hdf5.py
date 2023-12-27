@@ -16,6 +16,8 @@ logger = logging.getLogger(__name__)
 
 from src.datamodules.components.odd_reader import ActsReader
 
+import pyarrow as pa
+import pyarrow.parquet as pq
 import h5pickle as h5py
 from pathlib import Path
 from joblib import Parallel, delayed
@@ -56,14 +58,11 @@ def convert_to_hdf5(reader: ActsReader, idx: int, outdir: str, prefix: str = "v1
     h5file.close()
 
 def convert_to_parquet(reader: ActsReader, idx: int, outdir: str, prefix: str = "v1"):
-    import pyarrow as pa
-    import pyarrow.parquet as pq
-
     outname = Path(f"{outdir}/spacepoints/{idx:09d}.parquet")
     if outname.exists():
         return
 
-    spacepoints, particles, true_edges = reader.read_event(idx)
+    spacepoints, particles, true_edges = reader.read_csv_event(idx)
     particles = particles[(particles['q'] != 0) & (particles['p_eta'].abs() < 4)]
     particles = pa.Table.from_pandas(particles, preserve_index=False)
     particles = particles.append_column("evtid", pa.array([idx] * len(particles)))

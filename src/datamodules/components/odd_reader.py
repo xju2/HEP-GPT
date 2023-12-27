@@ -17,6 +17,7 @@ from typing import Tuple
 
 import numpy as np
 import pandas as pd
+import pyarrow.parquet as pq
 
 from src.utils.pylogger import get_pylogger
 from src.datamodules.components.event_reader_base import EventReaderBase
@@ -49,14 +50,24 @@ class ActsReader(EventReaderBase):
         self.spname = spname
 
         # count how many events in the directory
+
         all_evts = glob.glob(os.path.join(
             self.inputdir, "event*-{}.csv".format(spname)))
+        self.is_parquet = len(all_evts) == 0
 
-        pattern = "event([0-9]*)-{}.csv".format(spname)
-        self.all_evtids = sorted([
-            int(re.search(pattern, os.path.basename(x)).group(1).strip())
-            for x in all_evts])
-        self.nevts = len(self.all_evtids)
+        if self.is_parquet:
+            pattern = "([0-9]*).parquet"
+            self.all_evtids = sorted([
+                int(re.search(pattern, os.path.basename(x)).group(1).strip())
+                for x in glob.glob(os.path.join(self.inputdir, "particles", "*.parquet"))])
+            self.nevts = len(self.all_evtids)
+        else:
+            pattern = "event([0-9]*)-{}.csv".format(spname)
+            self.all_evtids = sorted([
+                int(re.search(pattern, os.path.basename(x)).group(1).strip())
+                for x in all_evts])
+            self.nevts = len(self.all_evtids)
+
         print("total {} events in directory: {}".format(
             self.nevts, self.inputdir))
 
@@ -84,11 +95,13 @@ class ActsReader(EventReaderBase):
         # Inverting the umid_dict
         self.umid_dict_inv = {v: k for k, v in umid_dict.items()}
 
-    def read_event(self, evt_idx: int = None) -> Tuple[pd.DataFrame, pd.DataFrame, np.ndarray]:
+    def read_csv_event(self, evt_idx: int = None) -> Tuple[pd.DataFrame, pd.DataFrame, np.ndarray]:
         """Read one event from the input directory through the event index
 
         Return:
             hits: pd.DataFrame, hits information
+            particles: pd.DataFrame, particles information
+            true_edges: np.ndarray, true edges
         """
         if (evt_idx is None or evt_idx < 0) and self.nevts > 0:
             evtid = self.all_evtids[0]
@@ -171,3 +184,44 @@ class ActsReader(EventReaderBase):
         self.evtid = evtid
 
         return sp_hits, particles, true_edges
+
+
+    def read_parquet_event(self, evt_idx: int = None) -> Tuple[pd.DataFrame, pd.DataFrame, np.ndarray]:
+        """Read one event from the input directory through the event index
+
+        Return:
+            hits: pd.DataFrame, hits information
+            particles: pd.DataFrame, particles information
+            true_edges: np.ndarray, true edges
+        """
+        if (evt_idx is None or evt_idx < 0) and self.nevts > 0:
+            evtid = self.all_evtids[0]
+            print(f"read event {evtid}.")
+        else:
+            evtid = self.all_evtids[evt_idx]
+
+        # construct file names for each csv file for this event
+        prefix = os.path.join(self.inputdir, "event{:09d}".format(evtid))
+        sp_fname = self.inputdir / "spacepoints" / f"{evt_idx}.parquet"
+        p_fname = self.inputdir / "particles" / f"{evt_idx}.parquet"
+        edge_fname = self.inputdir / "true_edges" / f"{evt_idx}.parquet"
+
+        # read space points
+        sp_hits = pq.read_table(sp_fname).to_pandas()
+        particles = pq.read_table(p_fname).to_pandas()
+        true_edges = pq.read_table(edge_fname).to_pandas()
+        return sp_hits, particles, true_edges
+
+
+    def read_event(self, evt_idx: int = None) -> Tuple[pd.DataFrame, pd.DataFrame, np.ndarray]:
+        """Read one event from the input directory through the event index
+
+        Return:
+            hits: pd.DataFrame, hits information
+            particles: pd.DataFrame, particles information
+            true_edges: np.ndarray, true edges
+        """
+        if self.is_parquet:
+            return self.read_parquet_event(evt_idx)
+        else:
+            return self.read_csv_event(evt_idx)
