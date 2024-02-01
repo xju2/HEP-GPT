@@ -1,0 +1,22 @@
+{
+    "name": "Ubuntu 20.04 with CUDA 12.2",
+    "dockerFile": "Dockerfile",
+
+    "runArgs": [
+        "--gpus", "all"
+    ],
+
+    "customizations": {
+        "vscode": {
+            "settings": {
+            },
+
+            "extensions": [
+                "ms-python.python",
+                "eamodio.gitlens",
+                "ms-toolsai.jupyter",
+                "charliermarsh.ruff"
+            ]
+        }
+    }
+}

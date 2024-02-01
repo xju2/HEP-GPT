@@ -52,8 +52,9 @@ class ActsReader(EventReaderBase):
         # count how many events in the directory
 
         all_evts = glob.glob(os.path.join(
-            self.inputdir, "event*-{}.csv".format(spname)))
+            self.inputdir, "**", "event*-{}.csv".format(spname)), recursive=True)
         self.is_parquet = len(all_evts) == 0
+
 
         if self.is_parquet:
             pattern = "([0-9]*).parquet"
@@ -70,6 +71,7 @@ class ActsReader(EventReaderBase):
 
         print("total {} events in directory: {}".format(
             self.nevts, self.inputdir))
+        self.all_event_filenames = all_evts
 
         if self.nevts == 0:
             raise ValueError("No events found in {}".format(self.inputdir))
@@ -110,7 +112,7 @@ class ActsReader(EventReaderBase):
             evtid = self.all_evtids[evt_idx]
 
         # construct file names for each csv file for this event
-        prefix = os.path.join(self.inputdir, "event{:09d}".format(evtid))
+        prefix = self.all_event_filenames[evt_idx][:-len(self.spname) - 5]
         hit_fname = "{}-hits.csv".format(prefix)
         measurements_fname = "{}-measurements.csv".format(prefix)
         measurements2hits_fname = "{}-measurement-simhit-map.csv".format(prefix)
@@ -129,8 +131,13 @@ class ActsReader(EventReaderBase):
 
         # add geometry_id to space points
         vlid_groups = sp.groupby(["geometry_id"])
-        sp = pd.concat([vlid_groups.get_group(x).assign(umid=self.umid_dict[x])
-                        for x in vlid_groups.groups.keys()])
+        try:
+            sp = pd.concat([vlid_groups.get_group(x).assign(umid=self.umid_dict[x])
+                            for x in vlid_groups.groups.keys()])
+        except KeyError as e:
+            logger.error(f"No geometry_id in spacepoints in file {prefix}")
+            return None, None, None
+
         logger.info(sp.columns)
 
         # read particles and add more variables for performance evaluation

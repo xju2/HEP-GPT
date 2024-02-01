@@ -63,6 +63,9 @@ def convert_to_parquet(reader: ActsReader, idx: int, outdir: str, prefix: str = 
         return
 
     spacepoints, particles, true_edges = reader.read_csv_event(idx)
+    if spacepoints is None:
+        return
+
     particles = particles[(particles['q'] != 0) & (particles['p_eta'].abs() < 4)]
     particles = pa.Table.from_pandas(particles, preserve_index=False)
     particles = particles.append_column("evtid", pa.array([idx] * len(particles)))
@@ -83,6 +86,7 @@ def convert(inputdir: str, outputdir: str, prefix: str = "v1", **kwargs):
     reader = ActsReader(inputdir=inputdir,
                         outputdir=outputdir, **kwargs)
     num_workers = kwargs.get("num_workers", 1)
+    Path(outputdir).mkdir(parents=True, exist_ok=True)
 
     tot_evts = reader.nevts
     Path(f"{outputdir}/particles").mkdir(parents=True, exist_ok=True)

@@ -24,3 +24,12 @@ python data/trackml/reader.py /global/cfs/cdirs/m3443/data/trackml-codalab/train
 ```bash
 python main.py experiment=test_trackml
 ```
+
+### Preprocessing
+
+Convert the ACTS CSV files into one Parquet file.
+```bash
+cd /pscratch/sd/x/xju/LLMTracking/HEP-GPT
+
+python scripts/convert_acts_to_hdf5.py /pscratch/sd/x/xju/LLMTracking/MCGenerators/acts/dask_v5_p500_try1 data/raw_parquets/v5/partition1 -w 10
+```
