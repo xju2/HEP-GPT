@@ -1,19 +1,35 @@
 [project]
-
 name = "HEP-GPT"
-
 version = "0.1.0"
-
 description = "HEP-GPT: A GPT model trained on HEP detectors"
-
 readme = "README.md"
-
 requires-python = ">=3.9"
-
 license = {file = "LICENSE"}
-
 keywords = ["HEP", "GPT", "detector", "representation"]
-
 authors = [
   {name = "X. Ju", email = "xju@lbl.gov" }
 ]
+
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["hep-gpt"]
+
+[tool.setuptools.dynamic]
+dependencies = []
+
+
+[tool.ruff]
+line-length = 100
+preview = true
+select = ["ALL"]
+ignore = [
+    "COM", "D100", "D101", "D102", "D103", "D104", "D105", "D205", "D401", "EM", "FIX", "FBT",
+    "S101", "S404", "S602", "PLR2004", "PLR0912", "PLR0913", "PLR0914", "PLR0915", "PLR0917",
+    "PLC0415", "G004", "PD901", "N802", "C901", "DTZ005", "DTZ007", "INP", "EXE002", "TD002",
+    "ANN001", "ANN002", "ANN003", "ANN101", "ANN201", "ANN202", "ANN204", "CPY001", "TRY003",
+    "N803", "N806", "N812", "T201", "PLW1514", "PTH123", "RUF015", "RUF017", "PLR6301", "ERA", "ISC001",
+]
+
