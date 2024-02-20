@@ -1,5 +1,5 @@
 {
     "files.trimTrailingWhitespace": true,
     "python.defaultInterpreterPath": "/pscratch/sd/x/xju/venv/llm/bin/python",
-    "editor.multiDocumentOccurrencesHighlight": true,
+    "sarif-viewer.connectToGithubCodeScanning": "off",
 }

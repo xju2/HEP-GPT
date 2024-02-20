@@ -9,17 +9,16 @@ keywords = ["HEP", "GPT", "detector", "representation"]
 authors = [
   {name = "X. Ju", email = "xju@lbl.gov" }
 ]
+dependencies = [
+]
+
+[project.urls]
+Homepage = "https://github.com/xju/HEP-GPT"
+Issues = "https://github.com/xju/HEP-GPT/issues"
 
 [build-system]
 requires = ["setuptools"]
 build-backend = "setuptools.build_meta"
-
-[tool.setuptools]
-packages = ["hep-gpt"]
-
-[tool.setuptools.dynamic]
-dependencies = []
-
 
 [tool.ruff]
 line-length = 100
@@ -33,3 +32,5 @@ ignore = [
     "N803", "N806", "N812", "T201", "PLW1514", "PTH123", "RUF015", "RUF017", "PLR6301", "ERA", "ISC001",
 ]
 
+[tool.ruff.lint.pydocstyle]
+convention = "numpy"

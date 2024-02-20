@@ -1,0 +1,20 @@
+{
+    "name": "docexoty/llm",
+    "image": "docker.io/doceoxty/llm:latest",
+
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                "ms-python.python",
+                "charliermarsh.ruff",
+                "eamodio.gitlens",
+                "ms-toolsai.jupyter"
+            ],
+            "settings": {
+                "files.trimTrailingWhitespace": true,
+                "python.defaultInterpreterPath": "/usr/bin/python"
+            }
+        }
+    }
+
+}
