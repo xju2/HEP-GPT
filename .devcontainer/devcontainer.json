@@ -1,6 +1,6 @@
 {
     "name": "docexoty/llm",
-    "image": "docker.io/doceoxty/llm:latest",
+    "image": "docker.io/docexoty/llm:latest",
 
     "customizations": {
         "vscode": {
@@ -8,7 +8,10 @@
                 "ms-python.python",
                 "charliermarsh.ruff",
                 "eamodio.gitlens",
-                "ms-toolsai.jupyter"
+                "ms-toolsai.jupyter",
+                "GitHub.copilot",
+                "ms-python.vscode-pylance",
+                "ms-python.isort"
             ],
             "settings": {
                 "files.trimTrailingWhitespace": true,
@@ -16,5 +19,4 @@
             }
         }
     }
-
 }
